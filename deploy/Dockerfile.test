@@ -1,0 +1,8 @@
+# Separate development image; never deploy this image as the production service.
+ARG BASE_IMAGE=memory-demo:local-check
+FROM ${BASE_IMAGE}
+USER 0
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends git nodejs tesseract-ocr tesseract-ocr-eng \
+    && rm -rf /var/lib/apt/lists/*
+USER 10001:10001

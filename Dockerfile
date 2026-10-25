@@ -3,7 +3,7 @@ FROM python:3.11-slim-bookworm
 ENV PYTHONUNBUFFERED=1 PYTHONUTF8=1 PYTHONDONTWRITEBYTECODE=1 \
     MEMORY_DATA_DIR=/data/official/evaluation/runtime
 WORKDIR /app
-COPY requirements-lock.txt pyproject.toml ./
+COPY requirements-lock.txt pyproject.toml LICENSE ./
 COPY src ./src
 RUN python -m pip install --no-cache-dir -r requirements-lock.txt \
     && python -m pip install --no-cache-dir --no-deps . \

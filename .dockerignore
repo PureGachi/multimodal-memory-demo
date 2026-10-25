@@ -4,6 +4,7 @@
 !.dockerignore
 !pyproject.toml
 !requirements-lock.txt
+!LICENSE
 !src/
 !src/**
 src/**/__pycache__/

@@ -16,6 +16,8 @@ from memory_app.config import Settings
 from memory_app.embeddings.factory import build_embedder
 from memory_app.vision.factory import build_vision
 from memory_app.evaluation.checkpoint import EvaluationCheckpoint, atomic_json
+from memory_app.evaluation.metrics import rank_metrics, summarize, summarize_images
+from memory_app.evaluation.reporting import markdown_report
 from memory_app.errors import cli_entrypoint
 from memory_app.media.local import LocalMediaStore
 from memory_app.memory.add import add_memory
@@ -138,40 +140,6 @@ def load_scenario(path, include_captions=False, *, with_images=False, assets_dir
     return rounds, cases
 
 
-def rank_metrics(round_ids, clues):
-    """K is returned messages; repeated rounds count only once towards recall."""
-    gold = set(clues)
-    if not gold:
-        return None
-    found = gold.intersection(round_ids)
-    first = next((i for i, value in enumerate(round_ids, 1) if value in gold), None)
-    return {"hit_at_k": int(bool(found)), "recall_at_k": len(found) / len(gold),
-            "mrr_at_k": 1 / first if first else 0.0,
-            "first_evidence_rank": first, "all_evidence_found": int(found == gold)}
-
-
-def summarize(details, names):
-    result = {}
-    for name in names:
-        scored = [d["channels"][name]["metrics"] for d in details
-                  if d["channels"][name]["metrics"] is not None]
-        result[name] = {"scored_questions": len(scored)}
-        for field in ("hit_at_k", "recall_at_k", "mrr_at_k", "all_evidence_found"):
-            result[name][field] = sum(m[field] for m in scored) / len(scored) if scored else None
-    return result
-
-
-def summarize_images(details, names):
-    result = {}
-    for name in names:
-        scored = [detail["channels"][name]["image_metrics"] for detail in details
-                  if detail["channels"][name]["image_metrics"] is not None]
-        result[name] = {"scored_questions": len(scored)}
-        for field in ("hit_at_k", "recall_at_k", "all_evidence_found"):
-            result[name][field] = sum(item[field] for item in scored) / len(scored) if scored else None
-    return result
-
-
 def evaluate(rounds, cases, embedder=None, top_k=5, *, vision=None, checkpoint=None):
     """Actual Add, OCR, retrieval and media-budget compose; no HTTP or final answer."""
     if not 1 <= top_k <= 100:
@@ -282,60 +250,13 @@ def evaluate(rounds, cases, embedder=None, top_k=5, *, vision=None, checkpoint=N
                 "image_summary": summarize_images(details, names)}
 
 
-def markdown_report(report):
-    lines = ["# Mem-Gallery 本地检索诊断", "", "不是官方比赛成绩，不生成答案、不评价答案正确率。", "",
-             "本实验索引所选场景的全部历史，不模拟逐会话/时间截止评测；是否处理原图见 metadata.raw_images_used。",
-             "K 按消息计数；命中任一标注轮次算 Hit，找回标注轮次的比例算 Recall；MRR 只看前 K 条。",
-             "同一轮的 user/assistant 都视为该轮证据，属于较宽松的轮次级评估，不保证能回答问题。",
-             "无 clue 的题只展示候选、不计分；不是拒答准确率。报告中的答案只供检查，未写入记忆。", "",
-             "```json", json.dumps(report["metadata"], ensure_ascii=False, indent=2), "```", "",
-             f"索引耗时：{report['index_seconds']:.2f} 秒；消息数：{report['indexed_messages']}；无 clue 题数：{report['no_clue_questions']}。", "",
-             "## 总体结果", "", "| 通道 | 计分题数 | Hit@K | Recall@K | MRR@K | 全部证据找回率 |",
-             "| --- | --- | --- | --- | --- | --- |"]
-    for name, values in report["summary"].items():
-        scores = ["—" if values[k] is None else f"{values[k]:.3f}" for k in
-                  ("hit_at_k", "recall_at_k", "mrr_at_k", "all_evidence_found")]
-        lines.append(f"| {name} | {values['scored_questions']} | " + " | ".join(scores) + " |")
-    for detail in report["details"]:
-        lines += ["", f"## Q{detail['number']} [{detail['point']}]", "", detail["question"], "",
-                  f"标注轮次：{', '.join(detail['clues']) or '无 clue（不计分）'}", "",
-                  "参考答案（仅用于人工检查）：", "", "```text", str(detail["answer"]), "```", "",
-                  "### 标注证据原文", ""]
-        lines += [f"![提问附图]({image['image']})" for image in detail.get("query_images", [])]
-        lines += ["检索实际使用的文字（含临时图片线索，不写入历史）：", "```text", detail.get("retrieval_query", detail["question"]), "```", ""]
-        for gold in detail["gold_evidence"]:
-            lines += [f"#### {gold['round']}（{gold['date']}）", ""]
-            for message in gold["messages"]:
-                lines += [message["role"], "", "```text", message["content"], "```", ""]
-                lines += [f"![标注证据图片（预处理情况见 metadata）]({image})" for image in message.get("images", [])]
-        if detail.get("expected_images"):
-            lines += ["### 参考图片", "", "依据：" + detail["expected_image_basis"], ""]
-            lines += [f"![{image['image_id']}]({image['image']})" for image in detail["expected_images"]]
-        for name, channel in detail["channels"].items():
-            lines += [f"### {name} · {channel['latency_ms']:.1f} ms", "",
-                      "指标：`" + json.dumps(channel["metrics"], ensure_ascii=False) + "`", ""]
-            for item in channel["returned"]:
-                mark = "命中标注轮次" if item["round"] in detail["clues"] else "非标注轮次"
-                lines += [f"#### 第 {item['rank']} 条 · {item['round']} · {item['role']} · {mark}", "",
-                          f"通道分数：{item['score']:.6f}", "", "```text", item["content"], "```", ""]
-                lines += [f"![实际召回图片]({image})" for image in item.get("images", [])]
-                for artifact in item.get("image_artifacts", []):
-                    if artifact.get("description"):
-                        lines += ["图片描述（视觉派生）：", "```text", artifact["description"], "```", ""]
-                    lines += ["OCR（派生信息）：", "```text", artifact["visible_text"], "```", ""]
-                    if artifact.get("contextual_description"):
-                        lines += ["对话背景（说话者陈述，不是视觉事实）：", "```text", artifact["contextual_description"], "```", "",
-                                  "背景来源消息：" + ", ".join(m["message_id"] for m in artifact.get("context_messages", [])), ""]
-    return "\n".join(lines) + "\n"
-
-
 def run():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--data", type=Path, default=DEFAULT_DATA)
     parser.add_argument("--embeddings", choices=["env", "ollama", "none", "compatible"], default="env",
                         help="env follows MEMORY_EMBEDDINGS; compatible uses paid text-embedding-v4 API")
     parser.add_argument("--include-captions", action="store_true", help="Use dataset captions, NOT our image understanding")
-    parser.add_argument("--with-images", action="store_true", help="Ingest original images with real local OCR; copy report assets")
+    parser.add_argument("--with-images", action="store_true", help="Ingest history/query images; --image-analysis selects OCR or configured analyzers; copy report assets")
     parser.add_argument("--compress-oversize", action="store_true", help="Explicitly derive <=10 MiB JPEG copies of oversized originals; local diagnostic policy, not official adapter")
     parser.add_argument("--ocr-languages", choices=["eng", "chi_sim", "chi_sim+eng"], default="eng")
     parser.add_argument("--image-analysis", choices=["ocr", "configured"], default=None,
@@ -348,7 +269,7 @@ def run():
     if args.limit < 0 or not 1 <= args.top_k <= 100:
         parser.error("--limit must be >= 0; --top-k must be between 1 and 100")
     if args.with_images and args.include_captions:
-        parser.error("--with-images excludes --include-captions for a clean OCR comparison")
+        parser.error("--with-images excludes --include-captions for a clean image-analysis comparison")
     if args.compress_oversize and not args.with_images:
         parser.error("--compress-oversize requires --with-images")
     settings = Settings.from_env()

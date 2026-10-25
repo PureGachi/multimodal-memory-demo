@@ -14,7 +14,7 @@ MESSAGES = {
     "http_error": ("模型服务返回 HTTP 错误", "根据状态与服务商代码检查地址、权限、地域、额度和限速。"),
     "invalid_response": ("模型响应格式或向量校验失败", "检查返回数量、index、维度、有限数值和非零向量；不会保存不合规结果。"),
     "invalid_json": ("图片描述不是合法 JSON", "核对服务商是否支持并遵守 response_format。"),
-    "invalid_schema": ("图片描述字段不符合要求", "需要 description 和 visible_text 两个字符串字段及非空证据。"),
+    "invalid_schema": ("图片描述字段不符合要求", "无背景模式需 description、visible_text；有背景模式还需 contextual_description。字段必须为合规字符串，并包含非空证据。"),
     "refused": ("视觉模型拒绝处理图片", "检查图片内容与服务商支持范围，不会把拒答保存为证据。"),
     "model_unavailable": ("模型调用失败", "查看模型配置与服务商状态，已完成的检查点会保留。"),
     "checkpoint_error": ("检查点不匹配、损坏或被其他进程占用", "使用原数据、原配置和原参数续跑；不要修改检查点，必要时新建一次实验。"),

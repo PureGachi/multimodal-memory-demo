@@ -1,6 +1,8 @@
 # 多模态记忆 Demo v0.3.0
 
 发布与固定版本：[版本流程](docs/RELEASING.md)；正式评测数据：[保留与删除流程](docs/DATA_RETENTION.md)；方法与引用：[说明](docs/METHOD.md)。
+理解当前项目优先看 [结构与模块职责](docs/ARCHITECTURE.md)，运行工具查 [scripts 分类索引](scripts/README.md)。历史笔记记录当时的设计，不等于当前实现清单。
+2026-10-26：本地 Linux Docker 构建、容器图文 HTTP/持久化和完整 Linux 回归已通过，镜像已导出；实际证据和仍需用户提供的部署条件见 [部署验收清单](docs/DEPLOYMENT_READINESS.md)。这不是公网部署或官方 Smoke 通过。
 许可证为 MIT。数据集、外部模型与依赖保持各自许可，不随本项目代码一并获得授权。
 v0.3.0 包含“图片对话背景”索引及治理工具；新提示词仅通过离线测试，尚未完成真实付费效果对照，不宣称分数提升或官方验收通过。
 
@@ -282,7 +284,7 @@ $env:MEMORY_EMBEDDINGS = 'none'
 
 初步对照中 chi_sim+eng 把“冷却水泵”误读成英文字母，chi_sim 正确读出中文及 M42，因此当前启动脚本默认 chi_sim，英文数据仍已安装；纯英文可另设 OCR_LANGUAGES=eng。这不是所有图片的最佳配置，需实际对照。真实小样本和修复记录见[10 月 13 日笔记](笔记/2026-10-13-学习笔记.md)。
 
-启用远程视觉会把图片发给配置的服务，可能收费。模型输出必须包含 description、visible_text 两个字符串字段；截断、空描述、非法 JSON、限流、超时均视为失败。无字图片得到空 OCR 是正常成功。Add 分析失败返回 503，不提交消息；Search 分析失败降级为已有文本／图片哈希通道。
+启用远程视觉会把图片发给配置的服务，可能收费。无背景模式返回 description、visible_text；带对话背景的入库分析另需 contextual_description，三类信息分开保存。字段缺失、类型/长度错误、截断、全无证据、非法 JSON、限流、超时均视为失败。无字图片得到空 OCR 是正常情况。Add 分析失败返回 503，不提交消息；Search 分析失败降级为已有文本／图片哈希通道。
 
 ```powershell
 # 单图检查：使用当前环境配置；临时入库，结果保存在 data/evaluations/images
@@ -302,20 +304,9 @@ $env:MEMORY_EMBEDDINGS = 'none'
 
 ### scripts 工具
 
-本地网页实验台：运行 `.\.conda\python.exe scripts\lab.py`，打开 <http://127.0.0.1:8010>。可选历史报告、逐题查看原文和三路排名、筛选漏检题，也可启动 Mem-Gallery 评测并查看日志。默认仅 BM25，可切换本地 Ollama。一次只运行一个实验，不需要另开竞赛服务；按 Ctrl+C 停止。此入口仅绑定本机，不要暴露公网。
+本地网页实验台：运行 `.\.conda\python.exe -X utf8 scripts\lab.py`，打开 <http://127.0.0.1:8010>。查看报告不调用模型；启动新实验的成本由所选模式决定。一次只运行一个实验，不需要另开竞赛服务；按 Ctrl+C 停止。只绑定本机，不要暴露公网。
 
-| 文件 | 用途 | 需要启动 FastAPI？ | 数据去向 |
-| --- | --- | --- | --- |
-| `smoke.py` | 实际 HTTP 链路检查：写入、重试、图文还原、用户隔离；不是官方 Smoke | 是 | 服务数据库，随机用户 |
-| `demo.py` | 写入三条故事，展示三个查询结果 | 是 | 服务数据库，固定 demo-local 用户 |
-| `evaluate.py` | 自建极小样本，比较 BM25、向量、RRF | 否；需要 Ollama | 临时数据库 |
-| `evaluate_mem_gallery.py` | Mem-Gallery 逐题检索诊断，输出 Markdown/JSON | 否；默认需要 Ollama | 临时数据库；报告在 data/evaluations/mem-gallery/ |
-| `lab.py` | 本地网页查看报告、逐题对照、启动 Mem-Gallery 评测 | 自己启动独立实验台 | 读取历史报告；新实验使用临时数据库 |
-| `inspect_image.py` | 单张真实图片的描述／OCR 与文字搜索检查 | 否；使用已配置的分析器与 embedding | 临时数据库；JSON 在 data/evaluations/images/ |
-| `backfill_images.py` | 指定用户旧图片补分析；默认只预览 | 否；应用前先停止 API 写入 | 更新 MEMORY_DATA_DIR 中已有数据库 |
-| `ocr_smoke.py` | 绘制三张文字图，真实 OCR + BM25 找回原图，保存报告 | 否；需要本地 Tesseract | 临时数据库；图片与报告在 data/evaluations/ocr/ |
-| `enable_ocr.ps1` | 在当前 PowerShell 启用项目本地 OCR、关闭远程视觉 | 否 | 只设置当前会话环境变量 |
-| `download_mem_gallery_images.py` | 补下载一个场景对话实际引用的原图，校验 LFS SHA-256 | 否 | data/benchmarks/mem-gallery/data/image/ |
+完整用途、费用与写入范围统一维护在 [scripts 分类索引](scripts/README.md)，这里不再维护第二份容易过期的工具表。
 
 ```powershell
 # 全部历史入库，先测前 10 题；不加入图片或图片描述
@@ -337,7 +328,7 @@ $env:MEMORY_EMBEDDINGS = 'none'
 
 ### 应用模块
 
-当前版本详细导读见 [V0.2 离线源码 Wiki（HTML）](笔记/2026-10-11-V0.2-源码导读/index.html)：17 章解释、系统架构图、Add/Search 调用图、图片关联、检索与异常策略。可直接用浏览器打开，或按[文档说明](笔记/2026-10-11-V0.2-源码导读/README.md)启动独立本机 HTTP，不需要模型服务。
+当前模块地图见 [结构说明](docs/ARCHITECTURE.md)。[V0.2 离线源码 Wiki（HTML）](笔记/2026-10-11-V0.2-源码导读/index.html) 是历史版本导读，可学习早期调用链，但尚未同步全部 v0.3.0 能力。可直接用浏览器打开，或按[文档说明](笔记/2026-10-11-V0.2-源码导读/README.md)启动独立本机 HTTP，不需要模型服务。
 
 详细学习文档与调用图见[2026-10-02 V0 源码导读](笔记/2026-10-02-学习笔记.md#note-10)，已合并到当天学习笔记中，保留导航与七个源码章节，按实际实现定位源码。
 
@@ -349,6 +340,6 @@ $env:MEMORY_EMBEDDINGS = 'none'
 
 - 检索在单用户数据中线性扫描，适用于小型本地 Demo，尚未验证 Full 评测容量或中文准确率。向量检索返回相似候选，不等同于可靠的无证据判定。
 - Add 默认要求文本向量生成成功才提交，Search 模型故障时降级词法与图片哈希召回。每条消息一个单元；文本按 400 字符分块建立向量，返回完整原消息。
-- 单图 10 MiB，Add/返回图像合计 30 MiB；top_k 支持 0–100。暂未提供整体 HTTP 请求体限额或速率限制，服务限本地使用。
+- 单图 10 MiB，Add/返回图像合计 30 MiB；top_k 支持 0–100。已有可配置 JSON 请求体、总并发和接收超时保护；这不是按时间窗口计数的限流器，也不证明 Full 评测容量。
 - 原始数据与向量同 SQLite 事务提交；图片在提交前按用户范围的哈希路径原子保存。数据库提交失败可能留下未引用图片，需要后续清理机制，不会形成可查询的半成品。并发重复请求可能重复计算向量，但数据库不会重复写入。
-- 配置与凭据不进入 Git。尚未实现按用户删除、TTL、Docker、公网部署或官方 smoke；正式提交前补齐，并核对当期模型限制。数据目录仅用于当前本地 demo。
+- 配置与凭据不进入 Git。已有 Docker/Compose 文件及专用正式任务目录的确认清理工具，但未完成目标 Linux、公网部署或官方 Smoke；按用户删除、逐条 TTL 和自动到期清理仍未实现。正式数据不能与本地公开实验混放。

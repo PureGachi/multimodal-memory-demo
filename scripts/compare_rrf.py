@@ -21,7 +21,8 @@ from memory_app.memory.units import text_chunks
 from memory_app.retrieval.fusion import rrf
 from memory_app.retrieval.lexical import lexical_search
 from memory_app.vector_stores.sqlite import SQLiteVectorStore
-from evaluate_mem_gallery import rank_metrics, summarize, summarize_images, markdown_report
+from memory_app.evaluation.metrics import rank_metrics, summarize, summarize_images
+from memory_app.evaluation.reporting import markdown_report
 
 
 class ReadOnlyStore:
