@@ -1,0 +1,24 @@
+services:
+  memory:
+    build:
+      context: ..
+      dockerfile: Dockerfile
+    env_file:
+      - ../.env.deploy
+    environment:
+      MEMORY_PROFILE: competition
+      MEMORY_DATA_DIR: /data/official/evaluation/runtime
+    ports:
+      - "127.0.0.1:8000:8000"
+    volumes:
+      - memory-data:/data
+    restart: unless-stopped
+    stop_grace_period: 31m
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+volumes:
+  memory-data:

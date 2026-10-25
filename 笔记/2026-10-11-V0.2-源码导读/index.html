@@ -1,0 +1,584 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="description" content="Memory Demo V0.2 源码导读：从架构、Add/Search 调用，到图片分析、存储、检索与测试的离线学习文档。">
+<title>Memory Wiki · V0.2 源码导读</title>
+<style>
+:root{--paper:#faf9f5;--panel:#fff;--ink:#263b37;--soft:#65746e;--line:#dde3dc;--green:#166a56;--tint:#edf4ee;--amber:#956426;--warm:#faf1df;--code:#20332f}*{box-sizing:border-box}html{scroll-behavior:smooth}body{margin:0;background:var(--paper);color:var(--ink);font:16px/1.9 system-ui,-apple-system,"Segoe UI","Microsoft YaHei",sans-serif}a{color:var(--green);text-underline-offset:4px}a:hover{text-decoration-thickness:2px}button,input{font:inherit}button{cursor:pointer}button:focus-visible,a:focus-visible,input:focus-visible,summary:focus-visible{outline:3px solid #bd8b39;outline-offset:4px}header.top{height:76px;border-bottom:1px solid var(--line);background:var(--paper);display:flex;align-items:center;justify-content:space-between;padding:0 36px;gap:20px}.brand{display:flex;align-items:center;gap:13px;text-decoration:none;color:var(--ink)}.mark{display:grid;place-items:center;background:var(--green);color:white;width:35px;height:35px;border-radius:10px;font:700 20px Georgia,serif}.brand strong{font-size:17px}.version{font-size:12px;background:#e6eee7;color:var(--green);border-radius:20px;padding:3px 10px}.top-meta{font-size:12px;color:var(--soft)}.layout{display:grid;grid-template-columns:278px minmax(0,1fr);max-width:1500px;margin:auto}.sidebar{position:sticky;top:0;height:100vh;overflow:auto;border-right:1px solid var(--line);padding:29px 22px 36px}.eyebrow{font-size:11px;letter-spacing:2px;font-weight:700;color:var(--green);text-transform:uppercase}.sidebar input{width:100%;padding:10px 12px;border:1px solid var(--line);border-radius:8px;background:#fff;font-size:13px;margin-top:12px;color:var(--ink)}#search-state{font-size:12px;color:var(--soft);min-height:25px;margin:5px 0 15px}.nav-group{font-size:10px;font-weight:700;letter-spacing:1.5px;color:var(--soft);margin:20px 9px 7px}.sidebar nav a{display:flex;gap:10px;align-items:baseline;text-decoration:none;padding:7px 10px;border-radius:7px;color:var(--soft);font-size:13px;line-height:1.7;margin:2px 0}.sidebar nav a span{font:11px monospace;opacity:.65}.sidebar nav a.active{background:#e7efe8;color:var(--green);font-weight:650}.sidebar nav a:hover{background:#eff2ec;color:var(--ink)}.sidebar footer{font-size:11px;border-top:1px solid var(--line);padding-top:18px;margin-top:27px;color:var(--soft)}main{min-width:0;padding:40px clamp(24px,5vw,82px) 70px;max-width:1150px}.breadcrumb{font-size:12px;color:var(--soft);margin-bottom:24px}.chapter{animation:appear .15s ease-out}.chapter[hidden]{display:none}@keyframes appear{from{opacity:.35}to{opacity:1}}h1,h2,h3,h4{line-height:1.45;letter-spacing:-.025em;color:var(--ink)}h1{font-size:clamp(29px,3.1vw,42px);margin:13px 0 19px;font-weight:720}h2{font-size:23px;margin:42px 0 15px;padding-top:12px;border-top:1px solid var(--line)}h3{font-size:18px;margin:26px 0 9px}h4{font-size:16px;margin:17px 0 6px}p{margin:13px 0}ul,ol{padding-left:24px}li{margin:8px 0}.lead{font-size:18px;color:var(--soft);line-height:1.95;max-width:780px}.meta{font-size:12px;color:var(--soft);margin:20px 0}.callout{padding:18px 21px;background:var(--tint);border-left:3px solid var(--green);border-radius:0 9px 9px 0;margin:23px 0;font-size:14px}.callout.warn{background:var(--warm);border-color:var(--amber)}.callout strong{color:var(--green)}.warn strong{color:var(--amber)}.cards{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:15px;margin:24px 0}.card{background:var(--panel);border:1px solid var(--line);padding:22px;border-radius:12px}.card h3{margin:0 0 8px}.card p{font-size:14px;color:var(--soft);margin:0}.card a{display:inline-block;font-size:13px;margin-top:13px}.code,pre{background:var(--code);color:#e1ece3;padding:20px 23px;border-radius:10px;overflow:auto;line-height:1.85;font:13px/1.85 Consolas,"Cascadia Code",monospace;tab-size:4;max-width:100%}code{font: .88em Consolas,"Cascadia Code",monospace;overflow-wrap:anywhere;background:#eaf0e9;padding:2px 5px;border-radius:4px;color:#1d5d4e}pre code{font:inherit;white-space:pre;overflow-wrap:normal;background:none;color:inherit;padding:0}pre.wrap{white-space:pre-wrap;overflow-wrap:anywhere}.source{font:12px/1.7 Consolas,monospace;color:var(--soft);overflow-wrap:anywhere;margin:9px 0}.scroll{overflow-x:auto;max-width:100%}table{border-collapse:collapse;width:100%;font-size:13px;margin:20px 0}th,td{text-align:left;vertical-align:top;border-bottom:1px solid var(--line);padding:12px 13px}th{background:#edf1e9;color:#4a5f56;font-weight:650}td{min-width:115px}table.compact td{min-width:90px}details{border:1px solid var(--line);background:#fff;border-radius:9px;padding:13px 17px;margin:18px 0}summary{cursor:pointer;font-size:14px;font-weight:650}details p{font-size:14px}details pre{margin-bottom:4px}.diagram{background:#fff;border:1px solid var(--line);border-radius:12px;padding:24px;margin:24px 0;overflow:hidden}.diagram figcaption{font-size:12px;color:var(--soft);margin-top:16px;text-align:center}.flow{list-style:none;padding:0;margin:0;display:flex;gap:12px;align-items:stretch}.flow li{flex:1;position:relative;background:#edf4ee;border:1px solid #d5e3d7;border-radius:8px;padding:14px 10px;text-align:center;font-size:13px;margin:0;min-width:0;overflow-wrap:anywhere}.flow li+li:before{content:'→';position:absolute;left:-13px;top:35%;color:#739080}.flow small{display:block;color:var(--soft);font-size:11px;margin-top:4px}.stack{display:grid;gap:10px}.stack .layer{border:1px solid var(--line);border-radius:8px;padding:14px 18px;text-align:center;font-size:14px;background:#f8faf6}.stack .layer b{display:block}.stack .layer small{color:var(--soft);font-size:12px}.down{text-align:center;color:#7f978c;line-height:1}.fork{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}.fork>div{background:#edf4ee;border-radius:8px;padding:17px 12px;font-size:13px;text-align:center}.fork small{display:block;color:var(--soft);font-size:12px}.caption-label{color:var(--green);font-size:11px;font-weight:700;letter-spacing:1px;margin-bottom:15px}.check{background:#fff;border:1px dashed #b9cbbd;padding:20px;border-radius:9px;font-size:14px;margin-top:27px}.check h3{margin:0 0 10px;font-size:16px}.check details{background:var(--tint);border:0}.pill{font-size:11px;padding:3px 8px;border-radius:5px;background:var(--tint);color:var(--green);white-space:nowrap}.pill.wait{background:var(--warm);color:var(--amber)}.pager{display:flex;justify-content:space-between;gap:20px;border-top:1px solid var(--line);padding-top:25px;margin-top:42px}.pager a{max-width:48%;font-size:14px;text-decoration:none}.pager small{display:block;color:var(--soft);font-size:11px}#menu{display:none;background:transparent;border:1px solid var(--line);border-radius:7px;color:var(--ink);padding:5px 12px}.page-foot{font-size:11px;color:var(--soft);margin-top:28px}.filetree{font-size:12px;line-height:1.95}.step{padding-left:19px;border-left:2px solid #d4e1d6;margin:23px 0}.step h3{margin-top:0}.step p{font-size:15px}.glossary dt{font-weight:650;margin-top:22px}.glossary dd{margin:5px 0;color:var(--soft);font-size:15px}@media(max-width:900px){header.top{height:auto;min-height:68px;padding:15px 19px}.top-meta{display:none}#menu{display:block}.layout{grid-template-columns:1fr}.sidebar{display:none;position:static;height:auto;max-height:55vh;border-right:0;border-bottom:1px solid var(--line)}body.menu-open .sidebar{display:block}.sidebar footer{display:none}main{padding:27px 22px 50px}.cards{grid-template-columns:1fr}.flow{flex-direction:column}.flow li+li:before{content:'↓';left:49%;top:-21px}.flow{gap:18px}.fork{grid-template-columns:1fr}.diagram{padding:19px}h2{font-size:21px}.brand strong{font-size:15px}.version{font-size:10px}.lead{font-size:17px}}@media print{body{background:#fff;font-size:11pt}.top,.sidebar,.pager,.page-foot,.breadcrumb{display:none!important}.layout{display:block}main{padding:0;max-width:none}.chapter,.chapter[hidden]{display:block!important;break-before:page;animation:none}.chapter:first-of-type{break-before:auto}h1{font-size:25pt}h2{font-size:17pt}pre{white-space:pre-wrap;color:#111;background:#f1f1ee}.diagram,.card,.callout{break-inside:avoid}details{border:0}details>*{display:block!important}.flow{flex-direction:row}.fork{grid-template-columns:repeat(3,1fr)}a{color:inherit}#search-state{display:none}}
+.read-guide{background:#f1f5ee;border:1px solid #d8e4d7;border-radius:10px;padding:19px 23px;margin:14px 0 28px;font-size:15px}.read-guide h3{margin:0 0 10px;font-size:17px}.read-guide p{margin:9px 0}.read-guide ol{margin:8px 0}.read-guide .takeaway{border-top:1px solid #d8e4d7;padding-top:11px;color:var(--green)}
+[hidden]{display:none!important}@media print{.chapter[hidden]{display:block!important}}
+</style>
+</head>
+<body>
+<header class="top"><a class="brand" href="#start"><span class="mark" aria-hidden="true">m</span><strong>Memory / 源码 Wiki</strong><span class="version">V0.2</span></a><span class="top-meta">本地文档 · 无 CDN · 2026 / 10 / 11</span><button id="menu" type="button" aria-controls="sidebar" aria-expanded="false">目录</button></header>
+<div class="layout">
+<aside class="sidebar" id="sidebar"><div class="eyebrow">Understand the system</div><label for="search" class="source">搜索章节与正文关键词</label><input id="search" type="search" placeholder="例如：payload、图片、RRF" autocomplete="off"><p id="search-state" role="status">17 章 · 建议从第 01 章开始</p>
+<nav aria-label="源码导读目录">
+<div class="nav-group">先建立全貌</div>
+<a href="#start"><span>01</span>这是什么项目，怎样读</a>
+<a href="#architecture"><span>02</span>架构图与模块职责</a>
+<a href="#files"><span>03</span>文件地图与阅读顺序</a>
+<a href="#startup"><span>04</span>启动、装配与依赖注入</a>
+<div class="nav-group">跟着数据走一遍</div>
+<a href="#api"><span>05</span>HTTP、payload 与 API</a>
+<a href="#add"><span>06</span>Add：一次写入的完整旅程</a>
+<a href="#vision"><span>07</span>图片理解：vision 与 llms</a>
+<a href="#storage"><span>08</span>消息、原图、向量怎样关联</a>
+<a href="#search-flow"><span>09</span>Search：一次查询的完整旅程</a>
+<div class="nav-group">理解检索与可靠性</div>
+<a href="#retrieval"><span>10</span>分片、embedding、BM25、RRF</a>
+<a href="#reliability"><span>11</span>失败、重试、缓存与隔离</a>
+<a href="#configuration"><span>12</span>配置、启动与旧图补处理</a>
+<a href="#evaluation"><span>13</span>测试工具与报告怎么读</a>
+<div class="nav-group">带着问题回到代码</div>
+<a href="#change"><span>14</span>想改功能，该改哪里</a>
+<a href="#limits"><span>15</span>已实现、待验证与未实现</a>
+<a href="#glossary"><span>16</span>术语表：把名字翻译成人话</a>
+<a href="#learning"><span>17</span>学习路线与自查练习</a>
+</nav><footer>依据当前仓库 V0.2 源码撰写。<br>图解不是额外的框架；箭头表示调用或数据流，具体含义见图注。<br>本文是人工整理的项目导读，不是 DeepWiki 官方生成页面。</footer></aside>
+<main id="content"><div class="breadcrumb" id="breadcrumb">MEMORY WIKI / 01 · 项目总览</div>
+
+<article class="chapter" id="start" data-title="这是什么项目，怎样读">
+<div class="eyebrow">01 / Start here</div><h1>从一条记忆出发，<br>理解整个项目。</h1>
+<p class="lead">这个系统做两件事：把历史消息和图片保存好；当你提出问题时，找回可能有帮助的原始消息和原图。V0.2 在这个基础上，增加了可配置的图片描述与 OCR 链路。</p>
+<p class="meta">说明文档日期：2026-10-11 · 对应代码版本：0.2.0 · 面向正在学习 Python / FastAPI 的开发者</p>
+<p class="meta">补充更新 2026-10-13：本地 OCR 已安装，并通过三张清晰文字图的真实识别与检索检查。详见第 07 章更新说明；复杂照片质量和远程视觉仍待验证。</p>
+<div class="callout"><strong>先记住这一句：</strong>main 负责把工具准备好，MemoryService 是业务入口，Add / Search 负责安排步骤，各个功能模块负责完成某一件具体的事。</div>
+<h2>我们到底想解决什么问题？</h2>
+<p>假设你曾上传一张设备照片。照片里的铭牌写着 <code>M42</code>，但你发消息时只写了“这是今天拍的设备”。几天后你问：“之前那个 M42 的设备照片在哪里？”如果系统只检索你输入的文字，历史里并没有 M42，可能就找不到。</p>
+<p>V0.2 的方案是：在写入时分析图片，得到“设备面板、红色指示灯”等描述，以及“型号 M42”等可见文字。把这些派生文字加入检索，但依然保留原始消息与照片。搜索命中派生信息后，再沿着 ID 关系找回原始证据。</p>
+<figure class="diagram"><div class="caption-label">项目最小闭环 · 数据方向</div><ol class="flow"><li>历史图文<small>你提供的原始资料</small></li><li>Add<small>解析、分析、建索引</small></li><li>持久化存储<small>消息、图片、向量</small></li><li>Search<small>根据问题找候选</small></li><li>原始证据<small>不是新编的答案</small></li></ol><figcaption>Add 是存入，Search 是找回。系统当前不负责把找回内容整理成最终回答。</figcaption></figure>
+<div class="read-guide"><h3>上面的图，像“先存资料，再翻资料”</h3><p><strong>从左往右读。</strong>箭头表示资料经历了哪些阶段，不是说上传一次图片就会立刻执行搜索。</p><ol><li><strong>历史图文：</strong>你上传设备照片，附带一句“今天拍的”。这是输入。</li><li><strong>Add：</strong>系统检查输入，必要时读图、提取文字，并准备以后查找所需的索引。</li><li><strong>持久化：</strong>把资料真正保存下来，程序关闭后还在。不是只放进临时变量。</li><li><strong>Search：</strong>过几天你问“M42 的照片在哪里”，系统才执行查找。</li><li><strong>原始证据：</strong>返回之前那条消息和照片，而不是重新画一张图或编一段回答。</li></ol><p class="takeaway"><strong>这张图只要记住：</strong>Add 是整理入库，Search 是按问题找回；中间的存储把两个时间点连接起来。</p></div>
+<h2>怎样阅读，不容易迷路？</h2>
+<div class="cards"><div class="card"><h3>第一次看：先看流程</h3><p>先读架构、启动、Add 和 Search。暂时不需要理解每一个数据库语句或数学公式。</p><a href="#architecture">从整体架构开始 →</a></div><div class="card"><h3>准备动手：再找文件</h3><p>遇到具体改动，再查看文件地图和“想改功能，该改哪里”。每章都列出对应源码路径。</p><a href="#change">按改动定位模块 →</a></div></div>
+<h2>读图前，先区分两类箭头</h2>
+<p><strong>调用箭头</strong>表示“谁让谁做事”，例如路由调用 <code>service.add()</code>。<strong>数据箭头</strong>表示“结果被交给哪里”，例如图片描述交给 embedding。两者不是同一件事：数据库会保存描述，但不负责调用视觉模型来生成描述。</p>
+<div class="callout warn"><strong>重要边界：</strong>代码已经支持配置真实图片分析器，但默认关闭。此前 61 项自动检查与受控分析器的 HTTP smoke 通过，只说明流程与异常处理经过检查；真实视觉服务、OCR 识别质量与费用仍未完成验证。</div>
+<h2>这是离线文档，不是在线控制台</h2>
+<p>整个页面的文字、样式和脚本都在同一个 HTML 文件里，没有外部字体、图表 CDN 或远程请求。双击可以阅读，也可以通过本机 HTTP 打开。搜索框搜索章节正文，左侧目录切换章节；打印会输出全部章节。这里不会运行评测、上传图片或调用模型。</p>
+<div class="check"><h3>读完这章，你应该能说出</h3><p>“我们正在做一个找回历史证据的系统；图片分析是帮助检索的中间步骤，不是用描述替换原图，也不是让 Search 自动生成答案。”</p></div>
+</article>
+
+<article class="chapter" id="architecture" data-title="架构图与模块职责">
+<div class="eyebrow">02 / System architecture</div><h1>谁安排流程，谁完成工作？</h1>
+<p class="lead">按功能分模块的目的，不是让目录看起来专业，而是让你修改某一种能力时，能够预料哪些地方会受到影响。</p>
+<figure class="diagram"><div class="caption-label">运行时架构 · 向下是主要调用方向</div><div class="stack"><div class="layer"><b>外部调用者</b><small>脚本、HTTP 客户端、未来的比赛平台</small></div><div class="down">↓</div><div class="layer"><b>api / routes.py + schemas.py</b><small>接收请求、验证字段、鉴权、转成 Python 数据</small></div><div class="down">↓</div><div class="layer"><b>memory / service.py</b><small>统一业务入口：add() 与 search()</small></div><div class="down">↓</div><div class="layer"><b>memory / add.py 与 search.py</b><small>写入或查询的步骤、顺序、成功与失败策略</small></div><div class="down">↓</div><div class="fork"><div><b>内容能力</b><small>parser、vision、llms、embeddings</small></div><div><b>检索能力</b><small>retrieval、vector_stores、evidence</small></div><div><b>持久化能力</b><small>storage、media</small></div></div></div><figcaption>main.py 与 config.py 在启动时装配这些对象，不位于每次 Search 的业务调用链中。</figcaption></figure>
+<div class="read-guide"><h3>上面的架构图，按“谁把事情交给谁”来读</h3><p><strong>从上往下读。</strong>每个框不是一台独立服务器，而是我们程序里的职责层。向下的箭头大致表示调用：上层把工作交给下一层，结果再沿调用关系返回。</p><ol><li><strong>外部调用者：</strong>可以是你运行的脚本，它向 /search 发请求。</li><li><strong>API：</strong>像收件窗口，核对请求格式与访问凭据。它不在这里计算相似度。</li><li><strong>MemoryService：</strong>像业务柜台，提供统一的 add()、search() 方法。外部不必逐个调用所有工具。</li><li><strong>Add / Search：</strong>像办事步骤单，决定先做什么、后做什么、失败怎么办。</li><li><strong>底部三组能力：</strong>是真正干具体工作的工具。“内容能力”读图或生成向量，“检索能力”找候选和排序，“持久化能力”存数据库与文件。</li></ol><p><strong>底部左右分组不是先后顺序。</strong>不是“先做完内容模块，再必然做检索模块，再做存储模块”；Add 和 Search 会按各自需求选用这些工具。</p><p class="takeaway"><strong>main 没画在主链里，是因为：</strong>它开机时把工具准备好，之后每次请求不用回到 main 重新安排一遍。</p></div>
+<h2>main 不是“每件事都要经过它”的总管</h2>
+<p>它更像开店前的准备工作：读取配置、创建数据库对象、准备媒体目录、创建模型适配器、建立 MemoryService，再把路由接到服务上。店开起来之后，客户的每个查询由路由交给 service，service 再交给 Search 流程。无需返回 main 重新安排。</p>
+<p>如果把搜索细节全写在 main 中，入口会同时知道 HTTP、模型调用、排序、图片恢复与数据库细节。以后修改检索时，会碰到启动代码；写单独的检索测试也更困难。现在 main 仍然知道具体实现——因为总得有一个地方负责“选哪一种工具”——但不负责每次操作的步骤。</p>
+<h2>为什么 MemoryService 和 add.py / search.py 都存在？</h2>
+<p><code>MemoryService</code> 持有准备好的工具，向外提供稳定的两个方法，统一记录耗时并处理文件系统错误。<code>add_memory()</code> 与 <code>search_memory()</code> 则是独立流程函数，安排具体步骤。你可以把前者看成“柜台”，后者看成“办理存入／查找业务的工作流程”。</p>
+<div class="scroll"><table><thead><tr><th>模块知道什么</th><th>不应该承担什么</th><th>例子</th></tr></thead><tbody><tr><td>API 知道请求格式</td><td>不实现向量排序</td><td>top_k 是否在 0–100</td></tr><tr><td>Add 知道写入顺序</td><td>不直接拼视觉 HTTP 请求</td><td>分析完成后才保存与提交</td></tr><tr><td>vision 知道分析任务</td><td>不决定整个 Add 是否提交</td><td>要求输出两个字符串字段</td></tr><tr><td>llms 知道服务协议</td><td>不写入记忆数据库</td><td>发送 Base64 image_url</td></tr><tr><td>storage 知道怎样存数据</td><td>不负责理解图片</td><td>把原始记录与向量同事务提交</td></tr></tbody></table></div>
+<h2>这是不是复杂的“插件架构”？</h2>
+<p>不是。当前没有插件注册中心，也没有让所有模块继承同一个大基类。embedding 和图片分析分别声明了 <code>Protocol</code> 能力约定，其余工具主要按方法名称协作。代码通过参数传递对象，仍然是一套容易追踪的小型实现。</p>
+<details><summary>查看对应 Mermaid 架构源码（供后续编辑）</summary><pre><code>flowchart TD
+    Main[main.py 启动装配] -.准备对象.-> Service[MemoryService]
+    Config[config.py 配置] --> Main
+    API[api 路由与校验] --> Service
+    Service --> Add[add_memory]
+    Service --> Search[search_memory]
+    Add --> Vision[vision 图片分析]
+    Vision --> LLM[llms 远程适配器]
+    Add --> Embed[embeddings]
+    Add --> Media[media 原图]
+    Add --> Store[storage SQLite]
+    Search --> Retrieval[BM25 与 RRF]
+    Search --> Vectors[vector_stores]
+    Search --> Evidence[evidence 原文与原图恢复]</code></pre></details>
+<p class="source">源码：src/memory_app/main.py · memory/service.py · memory/add.py · memory/search.py</p>
+</article>
+
+<article class="chapter" id="files" data-title="文件地图与阅读顺序">
+<div class="eyebrow">03 / Repository map</div><h1>打开仓库以后，先看哪里？</h1>
+<p class="lead">下面的树不是要求你从上往下全部背下来。它是一张地图：当你问“这件事是谁做的”，用它定位文件。</p>
+<pre class="filetree"><code>src/memory_app/
+├── main.py                    启动与装配
+├── config.py                  环境变量 → Settings
+├── api/
+│   ├── routes.py              /health、/add、/search
+│   └── schemas.py             请求字段与数据格式约束
+├── memory/
+│   ├── service.py             对外业务入口，持有工具对象
+│   ├── add.py                 写入流程
+│   ├── search.py              查询流程
+│   ├── parser.py              解析文字／图片、保持内容顺序
+│   ├── models.py              Unit、Candidate
+│   ├── images.py              图片派生结果与消息关联
+│   ├── indexing.py            原文／描述／OCR 的检索来源
+│   ├── units.py               400 字符分片
+│   ├── evidence.py            搜索结果恢复原始图文
+│   ├── backfill.py            旧图片补分析
+│   └── errors.py              业务异常类型
+├── vision/
+│   ├── base.py                ImageAnalysis 与能力约定
+│   ├── caption.py             图片任务提示词、输出校验
+│   ├── ocr.py                 Tesseract 子进程适配
+│   ├── pipeline.py            分析器组合、缓存读取
+│   └── factory.py             根据配置创建分析器
+├── llms/compatible.py         远程视觉 HTTP 协议
+├── embeddings/base.py         文本向量能力约定
+├── embeddings/ollama.py       Ollama 文本向量适配
+├── vector_stores/sqlite.py    保存向量、相似度查找
+├── storage/sqlite.py          消息、幂等、缓存、事务、迁移
+├── media/local.py             保存／读取原图文件
+├── media/validation.py        图片真实性与大小检查
+├── retrieval/lexical.py       BM25 关键词检索
+├── retrieval/fusion.py        RRF 排名融合
+└── lab/                       独立本地实验台，不是竞赛 API
+
+scripts/                       人手运行的演示、诊断、维护入口
+tests/                         自动回归检查
+data/                          本机数据库、媒体、数据集、报告
+笔记/                          讨论过程、设计记录、当前源码导读</code></pre>
+<h2>同样叫“存储”，为什么分三个目录？</h2>
+<p><code>storage</code> 保存结构化记录和事务状态；<code>media</code> 保存大的图片文件；<code>vector_stores</code> 负责向量的写入和相似查找。当前 storage 和 vector_stores 都用 SQLite，但它们负责的事情不同。未来更换向量数据库时，不一定要同时更换原始消息数据库。</p>
+<h2>按你正在解决的问题，选择阅读顺序</h2>
+<div class="scroll"><table><thead><tr><th>你的问题</th><th>优先看</th><th>接着看</th></tr></thead><tbody><tr><td>服务怎么启动？</td><td>main.py、config.py</td><td>vision/factory.py、api/routes.py</td></tr><tr><td>新增一条记忆做了什么？</td><td>memory/add.py</td><td>parser → images → indexing → storage</td></tr><tr><td>为什么没有搜到？</td><td>memory/search.py</td><td>lexical → vectors → fusion → evidence</td></tr><tr><td>图片描述不对？</td><td>vision/caption.py</td><td>llms/compatible.py、inspect_image.py</td></tr><tr><td>图片存在哪里？</td><td>media/local.py</td><td>main.py 中的 root、Unit.media_keys</td></tr><tr><td>评测网页怎么工作？</td><td>lab/app.py、lab/index.html</td><td>scripts/evaluate_mem_gallery.py</td></tr></tbody></table></div>
+<div class="callout">源码路径都以项目根目录为起点。在编辑器里用“快速打开”输入路径即可。本文不提供任意文件读取的 HTTP 接口，避免为了读文档而开放整个仓库。</div>
+<div class="check"><h3>先动手做一件小事</h3><p>打开 add.py，只找函数调用名称，暂时不研究它们的内部实现。你会看到 parse_content、enrich_images、embedding_records、media.put、store.commit_add。这就是这条主线。</p></div>
+</article>
+
+<article class="chapter" id="startup" data-title="启动、装配与依赖注入">
+<div class="eyebrow">04 / Composition</div><h1>服务还没接到请求时，<br>已经准备了什么？</h1>
+<p class="lead">“启动”与“执行一次查询”是两个时间段。先分清它们，main.py 就容易理解了。</p>
+<h2>启动命令进入哪里？</h2>
+<pre><code>.\.conda\python.exe -m uvicorn memory_app.main:create_app --factory --host 127.0.0.1 --port 8000</code></pre>
+<p><code>memory_app.main:create_app</code> 指向 main.py 中的工厂函数。<code>--factory</code> 告诉服务器调用这个函数取得 FastAPI 应用。不是每来一个请求就重新创建整个应用。</p>
+<div class="step"><h3>1 · 读取 Settings</h3><p>如果调用者没有传入 settings，就调用 <code>Settings.from_env()</code> 从环境变量读取。比如数据目录、Ollama 地址、是否启用图片分析。配置只描述“我们想使用什么”，它本身不会读图或生成向量。</p></div>
+<div class="step"><h3>2 · 创建分析器与存储对象</h3><p><code>build_vision(settings)</code> 根据开关创建视觉 API 分析器、OCR，或组合 pipeline；都关闭则为 None。随后创建 SQLiteStore、LocalMediaStore。数据库初始化可能迁移旧向量表。配置错误先报错，避免无效配置却先打开并迁移数据库。</p></div>
+<div class="step"><h3>3 · 准备文本 embedding</h3><p>启用 Ollama 时，创建 OllamaEmbedder。它会检查模型列表并记录模型 digest，作为向量版本的一部分。即使图片分析关闭，文本向量仍可以独立启用；反过来也可以只用 OCR + BM25。</p></div>
+<div class="step"><h3>4 · 把工具交给 MemoryService</h3><p>创建服务对象，再把这个对象交给 API 路由。之后路由不必知道数据库文件在哪里，只需要知道 service 有 add 与 search 方法。</p></div>
+<pre><code># 对照 main.py 的关键装配语句
+service = MemoryService(
+    store, media, embedder, SQLiteVectorStore(store), vision
+)
+app.include_router(build_router(service, settings.api_key, settings.embeddings))</code></pre>
+<h2>这就是“依赖注入”吗？</h2>
+<p>是的，这里使用的是很朴素的构造函数／参数传递。<strong>依赖</strong>是流程需要使用的工具；<strong>注入</strong>是由外部创建好工具，再通过参数交给流程。不是黑客输入，也不需要特殊框架。</p>
+<pre><code># 流程没有自己写死“连接某个模型”
+def add_memory(payload, store, media, embedder, vectors, vision=None):
+    ...  # 使用传入的工具
+
+# 测试时，可以传入输出可控的 embedder / vision
+app = create_app(settings, embedder=test_embedder, vision=test_analyzer)</code></pre>
+<p>这样测试数据库故障时，不需要真的调用付费视觉模型；测试向量失败时，也不需要故意关掉你正在用的 Ollama。我们替换的是工具对象，而不是重写整条 Add 流程。</p>
+<h2>Protocol 又是什么？</h2>
+<p>它描述对象应当提供哪些成员。例如 ImageAnalyzer 需要 version 和 analyze(raw, mime)，返回 ImageAnalysis。它类似接口说明书，帮助阅读和静态检查；不是必须继承的插件基类，也不会自动确保远程服务输出正确。输出格式检查依然要在适配器里完成。</p>
+<p class="source">源码：main.py · config.py · memory/service.py · vision/factory.py · vision/base.py</p>
+</article>
+
+<article class="chapter" id="api" data-title="HTTP、payload 与 API">
+<div class="eyebrow">05 / API boundary</div><h1>外部数据，怎样进入流程？</h1>
+<p class="lead">API 是外界和内部代码约定的入口。HTTP 是传递请求的方式，JSON 是请求的表示格式，payload 是“这次携带的数据”的通用叫法。</p>
+<h2>一次 Add 的示例</h2>
+<pre><code>{
+  "request_id": "photo-001",
+  "user_id": "alice",
+  "session_id": "session-1",
+  "messages": [
+    {
+      "role": "user",
+      "content": [
+        {"type": "text", "text": "这是今天拍的设备"},
+        {"type": "image_url", "image_url": {
+          "url": "data:image/png;base64,这里是实际图片的Base64数据"
+        }}
+      ]
+    }
+  ]
+}</code></pre>
+<p>这是结构示例，不是可直接提交的图片数据。当前接口接受内联 PNG / JPEG / WebP Data URI，不会自动下载任意网络图片链接。普通纯文字消息的 content 也可以直接是字符串。</p>
+<div class="scroll"><table><thead><tr><th>字段</th><th>实际含义</th><th>不能混淆的地方</th></tr></thead><tbody><tr><td>user_id</td><td>这份记忆属于谁</td><td>是数据隔离范围，不等于 session_id</td></tr><tr><td>session_id</td><td>这条消息来自哪次会话</td><td>当前 Search 不要求指定它，也不会只搜一个会话</td></tr><tr><td>request_id</td><td>标识这一次 Add 请求</td><td>重试同请求应保持相同 ID 和内容</td></tr><tr><td>messages</td><td>一批用户／助手消息</td><td>每条消息是一个 Unit，不是整批一个 Unit</td></tr><tr><td>timestamp</td><td>可选的原消息整数时间戳</td><td>保留但当前不用于时间截止过滤</td></tr></tbody></table></div>
+<h2>先弄懂 schema：它是一张“填写规则表”</h2>
+<p>你可以把请求当成一张表单：user_id 填谁的资料，query 填想找什么，top_k 填最多要几条。<strong>schema 规定表单有哪些格子，每格允许填什么，哪些不能空。</strong>它不负责真正搜索，就像表单的填写要求不会替你办理业务。</p>
+<p>你记得的 AI 工具接口也是这个意思。工具的“用途描述”告诉 AI 什么时候使用它；参数 schema 告诉 AI 调用时怎样填参数。注释或自然语言描述可以帮助理解，但<strong>描述本身不等于完整的 schema</strong>。</p>
+<figure class="diagram"><div class="caption-label">schema 在哪里起作用 · 正常请求路径</div><ol class="flow"><li>外部 JSON<small>这次实际填写的数据</small></li><li>schema 检查<small>检查结构、类型、范围</small></li><li>MemoryService<small>接收通过检查的数据</small></li><li>Search 流程<small>真正执行查找</small></li></ol><figcaption>请求验证失败会返回 422，不进入业务搜索；鉴权另有独立检查。合法格式不代表一定能搜到证据。</figcaption></figure>
+<div class="read-guide"><h3>用两个 top_k 例子读这张图</h3><p><strong>填 5：</strong>满足整数和 0–100 范围，能通过这一项格式检查。其他字段也合法、鉴权通过后，才进入 Search，最后最多返回 5 条消息。</p><p><strong>填 -1：</strong>数据到 schema 这一步就被拦下，返回 422。不会先搜索再删掉结果。</p><p><strong>填 5 但问题根本没有证据：</strong>格式仍然合法。schema 不知道历史资料能否回答问题，那是检索效果与后续判断的事情。</p><p class="takeaway"><strong>schema 问“你有没有按规定填写”，Search 问“资料里能找到什么”。</strong></p></div>
+<pre><code># api/schemas.py 中的实际定义
+class SearchRequest(BaseModel):
+    query: Content
+    user_id: Identifier
+    top_k: Annotated[StrictInt, Field(ge=0, le=100)]
+    options: list[str] | None = None</code></pre>
+<div class="scroll"><table><thead><tr><th>代码怎么写</th><th>翻译成人话</th><th>你先关注什么</th></tr></thead><tbody><tr><td>class SearchRequest(BaseModel)</td><td>定义一份搜索请求的数据规则，交给 Pydantic 检查</td><td>这是格式声明，不是搜索算法</td></tr><tr><td>query: Content</td><td>query 必填，可以是规定的文字或图文内容</td><td>冒号后面写的是允许的数据类型</td></tr><tr><td>user_id: Identifier</td><td>user_id 必填，而且不能只有空白</td><td>它标记本次查谁的记忆</td></tr><tr><td>StrictInt、ge=0、le=100</td><td>严格整数，大于等于 0、小于等于 100</td><td>不是任意字符串或负数都能填</td></tr><tr><td>options ... = None</td><td>options 可以不提供；默认没有额外提示</td><td>等号后的值是默认值</td></tr></tbody></table></div>
+<p><strong>读这张表时：</strong>先看第二列，把规则读成一句普通话；再回到第一列找对应写法。不用第一次就记住 Annotated 的全部语法。建议打开 <code>src/memory_app/api/schemas.py</code>，先读 SearchRequest，再读 AddRequest，最后才往上追 Content、Identifier 是怎样定义的。</p>
+<h2>路由里发生了什么？</h2>
+<pre><code>@router.post("/add", dependencies=[Depends(authorize)])
+def add(body: AddRequest):
+    return service.add(body.model_dump(mode="json"))</code></pre>
+<p>FastAPI / Pydantic 先根据 schemas.py 检查字段和类型；鉴权函数检查配置的 API Key；<code>model_dump()</code> 把请求模型转换成普通字典。这个字典交给 service，到了 add_memory 中就叫 payload。</p>
+<p>注意有两层验证：schemas 检查“结构像不像一条合法请求”；parser 和图片验证继续检查“文字是否只有空格、图片字节是否合法、MIME 是否真实、大小是否超限”。有 image_url 字段，不代表里面就真的是图片。</p>
+<h2>Search 的格式更简单</h2>
+<pre><code>{
+  "user_id": "alice",
+  "query": "之前型号 M42 的设备照片",
+  "top_k": 5,
+  "options": null
+}</code></pre>
+<p>query 可以是文字，也可以是图文块。top_k 是最多返回多少条<strong>消息</strong>，不是几张图片或几个片段。options 是可选的文字提示，会拼进查询文字，不是已经确定的答案，不会写入记忆。top_k=0 返回空列表；允许范围是 0–100。</p>
+<h2>HTTP 状态码在告诉你什么？</h2>
+<p>200 是操作成功；401 是鉴权失败；409 是同 request_id 的内容冲突；422 是请求内容不合法；503 是模型或存储不可用。不要遇到 503 就换一个 request_id 盲目重发；修复问题后，用原请求重试通常更合适。</p>
+<p class="source">源码：api/schemas.py · api/routes.py · memory/parser.py · media/validation.py · main.py</p>
+</article>
+
+<article class="chapter" id="add" data-title="Add：一次写入的完整旅程">
+<div class="eyebrow">06 / Write path</div><h1>跟着一张设备照片，<br>走完 Add。</h1>
+<p class="lead">这一章只追踪一条主线：输入图文如何变成“以后可以被找回的记忆”。示例中的模型结果是假设，不代表真实模型已经识别过这张图。</p>
+<figure class="diagram"><div class="caption-label">Add 调用主线 · 按执行顺序</div><div class="stack"><div class="layer"><b>API → MemoryService.add → add_memory</b><small>HTTP 边界进入业务流程</small></div><div class="down">↓</div><div class="layer"><b>请求哈希与幂等检查</b><small>同一次重试直接返回；冲突则拒绝</small></div><div class="down">↓</div><div class="layer"><b>parse_content → Unit</b><small>验证所有消息，保留有序内容与原始文字</small></div><div class="down">↓</div><div class="layer"><b>enrich_images → analyze_cached → vision.analyze</b><small>启用时生成图片描述／可见文字及来源记录</small></div><div class="down">↓</div><div class="layer"><b>embedding_records → embedder.embed</b><small>原文、描述、可见文字分别分片，关联来源</small></div><div class="down">↓</div><div class="layer"><b>media.put → store.commit_add</b><small>保存原图；数据库原子提交消息、缓存、向量与幂等状态</small></div></div><figcaption>远程模型与 OCR 工作发生在数据库写事务外。图上的步骤不是全部都由 store 内部执行。</figcaption></figure>
+<div class="read-guide"><h3>上面的 Add 图，是“存一条记忆”的步骤单</h3><p><strong>从上到下逐框读，每一行的 → 表示框内的小调用顺序。</strong>例如“enrich_images → analyze_cached → vision.analyze”表示：先安排这张图的分析，检查是否能复用，只有缓存没命中时才真的调用模型，不是每次都必走三个函数。</p><ol><li><strong>接请求：</strong>API 把已经过格式检查的数据交给服务，服务进入 Add。</li><li><strong>查重试：</strong>先问“这次请求之前是不是已经成功了”。成功重放可走快捷返回，不再执行下面所有步骤。</li><li><strong>解析：</strong>把消息整理成 Unit，把图片解码，并记下原始顺序。</li><li><strong>图片分析：</strong>开关打开时才做。比如原图提取到“红色灯”和“M42”；不开启就跳过。</li><li><strong>建立向量：</strong>原话、图片描述和可见文字分别成为检索线索，并保留所属消息。</li><li><strong>落盘与提交：</strong>原图写进媒体目录，消息与索引写进数据库，成功后才告诉调用者完成。</li></ol><p class="takeaway"><strong>这张图最重要的不是背函数名，而是：</strong>先验证和计算，再保存与提交；Add 统筹，模型与存储各做自己的工作。</p></div>
+<h2>第一步：先确认这是不是重试</h2>
+<p>Add 对整个请求生成 payload_hash，再查看 requests 表里同用户、同 request_id 的记录。如果哈希相同，说明这次是已成功请求的重放，不需要重新算向量或再次分析图片。如果哈希不同，则返回 409，防止一个请求 ID 指向两份不同内容。</p>
+<p>重放分支仍会从原请求解析图片并执行 media.put。原因是数据库记录可能还在，但原图被误删了；相同请求重试可以补回原图。这不是给历史图片补描述：模型开关变化后，重放仍不会重做分析。</p>
+<h2>第二步：解析整批消息</h2>
+<p>假设消息有“文字、图片、文字”三个块。parser 返回四份东西：可存储的有序 content、拼接后的原始文字 text、图片 keys、解码后的图片字节。content 里的图片不继续保存很长的 Base64，而是保存 media_key 和 MIME；以后读取时恢复 Data URI。</p>
+<p>每条消息生成一个 Unit。它的 ID 由用户、请求 ID、消息序号确定，所以同一次重试得到同样身份。流程先验证整批消息，再启动图片模型；否则前面的图片已经收费，最后一条非法消息又使整批失败，就会产生不必要的费用。</p>
+<h2>第三步：给图片增加派生资料</h2>
+<p>如果 vision 为 None，跳过。否则 images.py 遍历每条消息里的图片，从当前请求缓存或数据库缓存复用分析；没有缓存才调用分析器。比如得到：</p>
+<pre><code>{
+  "description": "设备面板上可见一盏红色指示灯",
+  "visible_text": "型号 M42"
+}</code></pre>
+<p>这些文字被放进 Unit.image_artifacts，不覆盖 Unit.text，也不改写用户的 content。每张图在一条消息中对应一个 artifact；同图在不同消息出现时，分析文字可以复用，但 artifact 仍各自关联到不同消息。</p>
+<h2>第四步：把不同来源分别建立向量</h2>
+<p>indexing.py 枚举原文、图片描述、可见文字，每种来源分别按 400 字符分片。每个片段记录所属 unit_id、source、块序号。embedding 模型返回向量后，再把这些来源信息与向量配对。这样即使三种来源都从第 0 块开始，也不会互相覆盖。</p>
+<h2>第五步：保存与提交</h2>
+<p>模型工作全部成功后，media.put 保存原图。接着 storage.commit_add 开启短写事务，再检查一次幂等状态，写入 Units、图片分析缓存、向量和 requests。第二次幂等检查是为了应对多个请求并发：它们可能都在一开始查到“还没写”，但真正提交时只能有一份成功记录。</p>
+<div class="callout warn"><strong>这不是跨文件系统和数据库的分布式事务。</strong>图片保存后，数据库如果提交失败，可能留下未引用文件；但消息和向量不会一半成功一半失败地被 Search 看见。未引用文件的自动清理仍未实现。</div>
+<details><summary>展开 Mermaid 调用图源码</summary><pre><code>flowchart TD
+    A[add_memory] --> B[check_request 幂等检查]
+    B -->|新请求| C[parse_content 与 Unit]
+    B -->|成功重放| Repair[media.put 补回原图并返回]
+    C --> D[enrich_images]
+    D --> E[analyze_cached]
+    E -->|缓存未命中| F[vision.analyze]
+    E --> G[image_artifacts]
+    F --> G
+    G --> H[embedding_records]
+    H --> I[embedder.embed]
+    I --> J[media.put]
+    J --> K[commit_add 数据库事务]</code></pre></details>
+<div class="check"><h3>自查：为什么不一开始就写入 Unit？</h3><details><summary>查看解释</summary><p>如果先写 Unit，再去分析图片或算向量，模型失败就可能留下不能正常检索的半成品。当前策略是先完成模型工作，再提交数据库；它让成功的含义更明确，但也意味着模型不可用时新的 Add 会失败。</p></details></div>
+<p class="source">源码：memory/add.py · memory/parser.py · memory/images.py · memory/indexing.py · storage/sqlite.py</p>
+</article>
+
+<article class="chapter" id="vision" data-title="图片理解：vision 与 llms">
+<div class="eyebrow">07 / Image understanding</div><h1>“读懂图片”不是<br>“把图片存下来”。</h1>
+<p class="lead">media 保存图片，vision 组织分析任务，llms 发送远程请求。这三个模块接触的可能是同一张图，但职责完全不同。</p>
+<div class="callout"><strong>2026-10-13 本地实测更新：</strong>本工作区已在 Conda 环境安装 Tesseract 5.5.1，中英文语言数据均可用。三张生成的清晰文字图已用真实 OCR + BM25 找回原图；这不是复杂照片准确率评测，远程视觉仍未验证。中文样例中 chi_sim 比 chi_sim+eng 读得更好，当前启用脚本默认 chi_sim。先在 PowerShell 运行 <code>. .\scripts\enable_ocr.ps1</code>，再启动服务。完整结果见 2026-10-13 学习笔记；此前章节中的“待安装／待真实验证”描述属于原始版本快照，不能理解为本机现在仍未安装。</div>
+<h2>先区分四种能力</h2>
+<div class="scroll"><table><thead><tr><th>能力</th><th>输入 → 输出</th><th>V0.2 状态</th></tr></thead><tbody><tr><td>原图存储</td><td>图片字节 → 本地文件</td><td>已实现，不理解内容</td></tr><tr><td>图片描述</td><td>图片 → 可见场景文字</td><td>可配置远程分析器，真实效果待验证</td></tr><tr><td>OCR</td><td>图片 → 可见字符转录</td><td>可选 Tesseract，需单独安装引擎与语言包</td></tr><tr><td>直接图片 embedding</td><td>图片 → 视觉向量</td><td>未实现，不要和描述的文本向量混淆</td></tr></tbody></table></div>
+<h2>vision/caption.py：规定“让模型做什么”</h2>
+<p>CaptionAnalyzer 准备提示词，要求描述看得见的物体、颜色与关系，转录能读清的文字，不猜测隐藏原因，不服从图片里的指令。结果必须是仅含 description、visible_text 两个字符串的 JSON 对象，每个字段最长 16000 字符；两者都为空则视为无效 caption。</p>
+<p>它不接受代码块包裹的 JSON，也不会偷偷把格式错误解释成“没有信息”。严格格式会让一些服务输出失败，但避免无效分析被当成成功入库。提示词只是减少幻觉与图片提示注入风险，不保证模型一定遵守。</p>
+<h2>llms/compatible.py：规定“怎样向服务发送”</h2>
+<p>CompatibleVisionClient 把图片编码为 Data URI，按 Chat Completions 的 image_url 格式发送到配置的 HTTPS 地址。一次请求一张图，设置输出 token 上限与超时，要求 finish_reason 为 stop，再取 message.content。它负责 HTTP 错误和响应结构，不负责保存结果。</p>
+<p>“兼容”不等于任何自称兼容的服务都能直接用。有些模型不支持图片，有些输出格式不同，有些推理参数需要额外配置；必须用实际账号做一次验证。当前不会自动重试远程调用，避免不透明地重复付费。</p>
+<h2>vision/ocr.py：本地专门读文字</h2>
+<p>TesseractAnalyzer 使用已安装的 Tesseract 命令。初始化时读取引擎版本；分析时把图片转为 RGB PNG，放进临时目录，然后启动带语言参数的进程，读取 stdout 文本。命令参数以列表传入，没有 shell 拼接。无文字图片识别为空是合法结果。</p>
+<p>OCR 不能代替场景理解：一个没有文字的红色按钮，可能被 OCR 输出为空；这不是“图片没存好”。中文识别需要对应语言包。当前不是自动下载 OCR 模型，也没有承诺小字、模糊图或复杂版面一定准确。</p>
+<h2>pipeline：可以任选，也可以组合</h2>
+<figure class="diagram"><div class="caption-label">配置到能力 · 不是必须同时启用</div><div class="fork"><div><b>仅远程视觉</b><small>description + 模型转录文字</small></div><div><b>仅本地 OCR</b><small>description 为空，保留识别文字</small></div><div><b>两者组合</b><small>依次调用，拼接各自文字</small></div></div><figcaption>组合模式不是投票或交叉验证。它可能保留重复文字，也可能保留两种不同的误读。</figcaption></figure>
+<div class="read-guide"><h3>上面的三个框，是三种配置选择，不是三个必经步骤</h3><p><strong>横着读，比较每个框能提供什么。</strong>例如一张铭牌照片：远程视觉可以描述“这是一块设备铭牌”，也可以转录文字；只用 OCR 时主要读“M42”等字符，不知道画面是什么物体；两者组合时依次调用，再拼接文字。</p><p><strong>再换成一张没有文字的红色按钮照片：</strong>OCR 很可能合法地返回空文字；远程视觉则有机会描述按钮与颜色。所以“只启用 OCR”不等于拥有全部图片理解能力。</p><p class="takeaway"><strong>第一版可以只选一种。</strong>组合不是自动更准确，也不是两个模型互相纠错；它可能增加线索，也可能增加重复和误读。</p></div>
+<p>ImagePipeline 将分析器输出合并。任意启用的分析器失败，整次图片分析失败；不是“其中一个失败就自动忽略”。缓存版本由各分析器版本组合而成，能够区分模型、提示词、语言或手动 revision 的变化。</p>
+<h2>为什么还要记录 providers？</h2>
+<p>为了以后发现错误时能知道是谁生成的。artifact 保存模型名、服务地址、提示词哈希或 OCR 引擎与语言、revision 等来源，不保存 API Key。组合后的 visible_text 是拼接文字，当前没有细粒度坐标、置信度或每个字符的独立来源。</p>
+<p class="source">源码：vision/base.py · vision/caption.py · vision/ocr.py · vision/pipeline.py · llms/compatible.py</p>
+</article>
+
+<article class="chapter" id="storage" data-title="消息、原图、向量怎样关联">
+<div class="eyebrow">08 / Data model</div><h1>搜到一个向量以后，<br>怎样找回那张图？</h1>
+<p class="lead">关键不是“向量里藏着图片”，而是每份派生数据都留下了来源 ID。向量查找解决相似性，ID 关系解决追溯。</p>
+<figure class="diagram"><div class="caption-label">来源关系图 · 箭头表示关联，不表示函数调用</div><div class="stack"><div class="layer"><b>向量记录</b><small>unit_id · embedding version · source · chunk_order · value</small></div><div class="down">↓ unit_id 找消息；source 标记原文或 artifact</div><div class="layer"><b>Unit 原始消息</b><small>content 原始顺序 · text 原始文字 · media_keys · image_artifacts</small></div><div class="down">↓ image_artifacts 中的 media_key</div><div class="layer"><b>图片派生记录 artifact</b><small>id · description · visible_text · version · providers · created_at</small></div><div class="down">↓ media_key 定位文件</div><div class="layer"><b>data/media / 用户哈希 / 图片哈希</b><small>保存原始图片字节，而不是向量或描述</small></div></div><figcaption>当前向量搜索按 unit_id 返回候选，source 用于索引来源与维护；API 暂不返回“究竟是哪一个片段命中”的解释。</figcaption></figure>
+<div class="read-guide"><h3>上面的关联图，是“按编号找回来源”，不是运行步骤</h3><p><strong>从最上面的向量往下追。</strong>可以把向量看成帮助查找的线索卡，unit_id 是卡上写着的消息编号；artifact_id 标记哪份图片分析结果，media_key 标记哪张原图。</p><ol><li>搜索找到了一个相关向量，它的 unit_id 是 <code>U1</code>。</li><li>通过 U1 找到原始消息；假设它写着“今天拍的设备”，并带有一张图。</li><li>U1 的 image_artifacts 里，有分析记录 <code>A1</code>，里面写着“M42”，并记录对应的 media_key。</li><li>把媒体根目录 root 和 media_key 拼起来，就能读取原图文件。</li></ol><p><strong>不要误读为“图片先变成向量，再从向量还原图片”。</strong>向量不包含可逆的完整图片。我们靠编号关系去读早已保存的原图。</p><p class="takeaway"><strong>实际返回时可以更直接：</strong>向量 → Unit → Unit.content 里的 media_key → 原图；artifact 的作用是保留分析线索和来源，不要求每次取图都先遍历它。</p></div>
+<h2>Unit 是什么粒度？</h2>
+<p>一个 Unit 对应一条用户或助手消息。它可以是纯文字，也可以包含几段文字和几张图片。一轮 user + assistant 对话通常是两个 Unit；一条长消息分成多个向量片段后，仍只有一个 Unit。最终 Search 的 top_k 也是按 Unit 计。</p>
+<div class="scroll"><table><thead><tr><th>Unit 字段</th><th>保存内容</th><th>用途</th></tr></thead><tbody><tr><td>id / user_id / session_id</td><td>消息身份、所属用户、来源会话</td><td>关联、隔离与追溯</td></tr><tr><td>role / timestamp / created_at</td><td>角色、原消息时间、写入时间</td><td>保留上下文；当前不做时间过滤</td></tr><tr><td>content</td><td>字符串或有序内容块，图片用 key 引用</td><td>恢复用户提供的原始证据</td></tr><tr><td>text</td><td>用户原始文字块拼接</td><td>原文检索来源，不混入生成描述</td></tr><tr><td>media_keys</td><td>这条消息引用哪些图片</td><td>图片哈希匹配、预算与读取</td></tr><tr><td>image_artifacts</td><td>图片派生结果列表</td><td>扩充检索，记录模型来源</td></tr></tbody></table></div>
+<h2>SQLite 里并不是“一切都在一张表”</h2>
+<p><code>units</code> 保存消息 JSON（其中嵌入 artifacts）；<code>vectors</code> 保存向量与来源字段；<code>requests</code> 保存已成功请求的哈希；<code>image_analyses</code> 是分析结果缓存，按用户、media_key、分析版本复用 description 与 visible_text。缓存不代替每条消息自己的 artifact 记录。</p>
+<pre><code># 同一消息可以有这些向量来源；各自块序号从 0 开始
+unit_id="U1", source="text",                       chunk_order=0
+unit_id="U1", source="image:A1:description",       chunk_order=0
+unit_id="U1", source="image:A1:visible_text",      chunk_order=0
+unit_id="U1", source="image:A2:description",       chunk_order=0</code></pre>
+<h2>media.key、root、put 到底是什么关系？</h2>
+<pre><code># 启动时：给媒体对象指定根目录
+media = LocalMediaStore(settings.data_dir / "media")
+
+# 解析图片时：根据用户与原始字节生成相对标识
+key = media.key(user_id, raw)
+
+# 写入时：真正拼出磁盘位置
+target = self.root / key
+# 然后 put 将 raw 写到 target</code></pre>
+<p>root 默认是 data/media；key 形如“用户 ID 的 SHA-256 / 图片字节的 SHA-256”。拼起来就是最终文件路径。raw 是二进制字节，不是 Base64 字符串；MIME 记录图片格式。文件名没有 .png 后缀，也不妨碍里面保存真实 PNG 字节。</p>
+<div class="callout warn">哈希不是加密，也不是图片向量。同样字节得到同样 key；裁剪、重新压缩后，即使肉眼像同一张图，也可能得到另一个 key。图片哈希匹配不能代替语义相似图片检索。</div>
+<h2>恢复原图在哪发生？</h2>
+<p>evidence.compose 读取候选 Unit，按原始 content 顺序保留文字，再通过 media.uri(key, mime) 读文件并生成 Data URI。模型描述不自动加进返回 content，所以外部看到的仍是原始消息，而不是系统生成的替代文本。</p>
+<details><summary>展开 Mermaid 来源图源码</summary><pre><code>flowchart TD
+    Vector[向量: unit_id + source + chunk_order] -->|unit_id| Unit[Unit 原始消息]
+    Vector -->|source 中的 artifact_id| Artifact[图片派生记录]
+    Unit --> Artifact
+    Artifact -->|media_key| File[原图文件]
+    Unit -->|media_keys| File
+    Cache[用户 + media_key + 分析版本缓存] -.复用分析文字.-> Artifact</code></pre></details>
+<p class="source">源码：memory/models.py · memory/images.py · memory/indexing.py · storage/sqlite.py · media/local.py · memory/evidence.py</p>
+</article>
+
+<article class="chapter" id="search-flow" data-title="Search：一次查询的完整旅程">
+<div class="eyebrow">09 / Read path</div><h1>“M42 的设备照片在哪里？”<br>系统怎样找？</h1>
+<p class="lead">Search 不是拿问题去和所有原图直接比较。当前主要把问题变成文字检索和文本向量检索，再把候选消息融合。</p>
+<figure class="diagram"><div class="caption-label">Search 数据与调用主线</div><div class="stack"><div class="layer"><b>API → MemoryService.search → search_memory</b><small>query、user_id、top_k、options</small></div><div class="down">↓</div><div class="layer"><b>解析查询，读取该用户的 Units</b><small>有查询图片且启用分析器时，临时提取文字</small></div><div class="down">↓</div><div class="fork"><div><b>BM25</b><small>问题文字 ↔ 原文 + 描述 + 可见文字</small></div><div><b>Dense 向量检索</b><small>问题向量 ↔ 同版本文本向量</small></div><div><b>图片哈希</b><small>查询图片 key ↔ 消息 media_keys</small></div></div><div class="down">↓ 候选消息排名列表</div><div class="layer"><b>RRF 合并与排序</b><small>按 unit_id 汇总；不是把不同路线原始分数相加</small></div><div class="down">↓</div><div class="layer"><b>evidence.compose → 返回完整原始图文</b><small>限制 top_k 与累计图片预算，缺图则明确报错</small></div></div><figcaption>三路按条件运行，不是总有三路。关闭 embedding 时没有 Dense，没有查询图片时没有哈希通道。</figcaption></figure>
+<div class="read-guide"><h3>上面的 Search 图，是“几种找法分别找，再合成一份结果”</h3><p><strong>先读顶部，再读中间三个并排框，最后读底部。</strong>并排表示三条候选路线，不表示同时开了三个线程；当前代码按顺序组织这些调用。</p><ol><li><strong>准备问题：</strong>你问“M42 的照片在哪里”，先取出查询文字，并限定只读你的记忆。</li><li><strong>BM25：</strong>找哪些历史原文或图片提取文字含有 M42 等词，比较文字线索。</li><li><strong>Dense：</strong>把问题转成向量，找意思接近的历史片段，不要求用词完全相同。</li><li><strong>图片哈希：</strong>只有你用图片来查时才适用，找字节完全相同的图。纯文字问题不会凭空走这条路线。</li><li><strong>RRF：</strong>收集各路消息名次，合并成一个消息排行榜。不是再调用一个大模型判卷。</li><li><strong>恢复证据：</strong>根据消息编号读原始内容和图片，返回给调用者。</li></ol><p class="takeaway"><strong>中间的三路产物是“候选消息排名”，底部才是最终返回的原始资料。</strong>候选不一定有用，也不保证有完整答案。</p></div>
+<h2>1 · 先确定查询范围和文字</h2>
+<p>parser 解出 query 的文字和图片 keys。options 中的文字拼进查询。读取 user_id 下所有 Units；top_k=0 或该用户没有记录时立即返回空，不调用图片模型。当前是用户级全历史搜索，不根据会话或提问时间截断。</p>
+<h2>2 · 如果问题是一张图片</h2>
+<p>启用分析器时，临时分析查询图片，或者复用同用户已有的 Add 分析缓存。得到的描述与可见文字加入这次查询，不写入 Units、不保存查询原图、不将新结果写入持久缓存。已有哈希匹配仍然保留。</p>
+<p>如果图片模型失败，保留输入中的文字和哈希路线继续查。这种降级不等于模型已经成功理解图片；对一张从未见过、没有文字的查询图片，降级可能找不到任何内容。</p>
+<h2>3 · BM25 搜索的是“扩展检索文字”</h2>
+<p>retrieval_text 把原文、description 和 visible_text 合在一起，生成只用于本次检索的 Unit 副本。原 Unit.text 不被改写。所以用户原话没有 M42，但图片 OCR 中有 M42，仍有机会通过关键词命中。</p>
+<h2>4 · Dense 搜索的是独立来源片段</h2>
+<p>对查询文字分片并生成查询向量，再查询同用户、同 embedding 版本的向量。每条消息可能有很多原文／描述／OCR 片段；当前取其中最高相似度作为该消息的 Dense 分数，不是把所有片段先平均。</p>
+<h2>5 · 合并，再恢复证据</h2>
+<p>每路候选深度为 <code>max(top_k * 3, 30)</code>。候选深度不是最后返回条数：多取一些供融合，再返回最多 top_k 条消息。RRF 汇总 unit_id 后，compose 恢复完整原文和图片。多个片段命中同消息，不会重复占据多个结果位置。</p>
+<div class="callout warn"><strong>“返回了东西”不等于“确实有答案”。</strong>向量路线当前没有可靠的相关性阈值，无证据问题也可能返回候选。缺少某条结果还可能是图片预算导致 compose 跳过该消息，不一定是排序里没有它。</div>
+<h2>一次 Search 返回什么？</h2>
+<pre><code>{
+  "data": [
+    {"id": "消息ID", "content": "原始文字或有序图文块",
+     "score": 0.032, "created_at": "写入时间"}
+  ]
+}</code></pre>
+<p>这是简化结构示例。score 是融合后的排序分，不是回答正确概率。created_at 是写入时间，不是照片拍摄时间。接口当前不输出最终自然语言答案，也不自动说明哪些 OCR 字符支持这次命中。</p>
+<details><summary>展开 Mermaid Search 调用图源码</summary><pre><code>flowchart TD
+    Q[search_memory] --> P[parse_content 查询解析]
+    P --> U[list_units 用户范围]
+    U --> V[可选查询图片临时分析]
+    V --> L[lexical_search]
+    V --> E[embedder.embed query=True]
+    E --> D[vectors.search]
+    P --> H[图片哈希候选]
+    L --> R[rrf]
+    D --> R
+    H --> R
+    R --> C[compose 恢复原始图文]</code></pre></details>
+<p class="source">源码：memory/search.py · memory/indexing.py · vector_stores/sqlite.py · retrieval/fusion.py · memory/evidence.py</p>
+</article>
+
+<article class="chapter" id="retrieval" data-title="分片、embedding、BM25、RRF">
+<div class="eyebrow">10 / Retrieval mechanics</div><h1>理解四个步骤，<br>就能看懂当前混合检索。</h1>
+<p class="lead">分片决定每个向量代表多大范围；embedding 生成表示；检索给候选排序；RRF 再组合排名。这几件事应分别调试，不要混成一个“模型好不好”。</p>
+<h2>一 · 分片：长文字为什么不只做一个向量？</h2>
+<p>一条很长的消息可能讨论旅行、设备、价格等多个主题。只做一个整体向量，某个小细节可能不够突出。因此我们把每个来源文字按 400 个 Python 字符切开，片段分别建向量。当前没有重叠、不按句子边界、不按 token 数切分；中文、英文字符都计入长度。</p>
+<pre><code>原文来源 text：          950 字符 → 第0块400 + 第1块400 + 第2块150
+第一张图 description：  120 字符 → 独立第0块
+第一张图 visible_text：  30 字符 → 独立第0块
+搜索命中任何一块 → unit_id → 返回完整原消息</code></pre>
+<p>短查询和长历史确实有信息稀释风险；分片只是缓解，不保证解决。句子被切断、必要上下文分散到两块也可能影响效果。是否加重叠或按句子切，要用失败案例和对照实验判断。</p>
+<h2>二 · embedding：把文字映射为数值表示</h2>
+<p>OllamaEmbedder 使用配置的模型。此前本机 nomic 输出为 768 维；维数来自模型，不是流程里写死“768 个关键词”。向量的每一维通常不能直接解释为“红色”“设备”等词。</p>
+<p>入库文字加 <code>search_document: </code> 前缀，查询加 <code>search_query: </code>。每批最多 16 段，禁止服务静默截断。返回结果要检查数量、数值、有限性、非零范数与批次维数一致，再做 L2 归一化。版本包含模型 digest、前缀版本与 chunk400，避免把不兼容表示混在一起。</p>
+<p>归一化之后，代码用点积比较两个向量，相当于比较余弦相似度。对某条消息的多个片段，取最高匹配分。查找仍遍历该用户同版本的全部向量，所以这里不是 HNSW 等近似索引。</p>
+<h2>三 · BM25：保留精确文字线索</h2>
+<p>词法路线将英文小写化，按字母／数字／下划线分词；中文加入单字和相邻双字。没有中文分词模型、停用词表或查询改写。BM25 考虑词是否出现、出现频率、在多少文档中常见及文档长度，帮助型号、专有名词等精确词命中。</p>
+<p>当前 BM25 的一份“文档”是一个 Unit 的原文加派生文字，不是每个 400 字符片段。不要把 embedding 的分片规则误认为 BM25 也按相同块建立索引。</p>
+<h2>四 · RRF：看名次，不直接比较分数</h2>
+<p>BM25 分数和向量相似度不在同一个刻度上。RRF 不直接相加它们，而是给每路中排第 r 的候选一个贡献：</p>
+<pre><code>贡献 = 1 / (60 + r)
+同一消息的最终分 = 它在各条路线中的贡献之和</code></pre>
+<div class="scroll"><table class="compact"><thead><tr><th>消息</th><th>BM25 名次</th><th>Dense 名次</th><th>RRF 总贡献（约）</th></tr></thead><tbody><tr><td>A</td><td>1</td><td>3</td><td>1/61 + 1/63 ≈ 0.03227</td></tr><tr><td>B</td><td>2</td><td>1</td><td>1/62 + 1/61 ≈ 0.03252</td></tr><tr><td>C</td><td>未进入候选</td><td>2</td><td>0 + 1/62 ≈ 0.01613</td></tr></tbody></table></div>
+<p><strong>上面的 RRF 表，先一行一行横着看：</strong>A 在 BM25 排第 1，就得到 1/61；在 Dense 排第 3，再得到 1/63，最后相加。C 只进入 Dense 候选，所以只有那一路贡献。“未进入候选”不是减分，只是没有这一份加分。再竖着比较最后一列，数字越大排得越前。</p>
+<p>这个例子里 B 综合后排在 A 前面，即使 BM25 的第一名是 A。融合并不保证胜过最强单路；一些有用候选也可能被混合排名挤出前 K，需要实际检查。</p>
+<h2>HNSW 是哪里的一种替代方案？</h2>
+<p>它替代的是“怎样在很多向量中找近邻”的部分，不替代图片理解、embedding 或 RRF。当前线性扫描简单、容易核查，数据增大后才需要根据延迟与容量考虑更高效的索引。换索引也不能弥补图片描述没有提到目标细节。</p>
+<div class="check"><h3>怎么定位一次漏检？</h3><p>先看原文／派生描述里是否有目标信息，再看 BM25 与 Dense 单路是否找到，最后看融合是否挤掉结果。只有弄清漏在哪一层，调整才有方向。</p></div>
+<p class="source">源码：memory/units.py · memory/indexing.py · embeddings/ollama.py · retrieval/lexical.py · retrieval/fusion.py · vector_stores/sqlite.py</p>
+</article>
+
+<article class="chapter" id="reliability" data-title="失败、重试、缓存与隔离">
+<div class="eyebrow">11 / Reliability</div><h1>正确的架构，也要明确<br>“失败时会发生什么”。</h1>
+<p class="lead">Demo 不只是正常路径的几次函数调用。重试、半成品、跨用户混淆和重复计费，都需要能说清楚。</p>
+<h2>Add 和 Search 为什么有不同失败策略？</h2>
+<p>Add 正在建立新的可检索记忆：启用的模型失败，就不应假装已经完成分析与索引。因此图片分析或文本 embedding 失败时不提交数据库，返回 503。Search 正在读取已有资料：某条模型路线失败，还可能用词法或哈希找到证据，所以允许降级。</p>
+<div class="scroll"><table><thead><tr><th>场景</th><th>当前行为</th><th>注意</th></tr></thead><tbody><tr><td>Add 视觉输出非法／超时</td><td>503，不提交记忆</td><td>已发生的远程费用不会因此自动退款</td></tr><tr><td>Add embedding 失败</td><td>503，不提交记忆</td><td>重试前的图片分析若未提交缓存，可能重新调用</td></tr><tr><td>Search 视觉失败</td><td>已有文字／哈希继续</td><td>不保证没有文字的新图片能被搜到</td></tr><tr><td>Search embedding 失败</td><td>BM25／图片哈希继续</td><td>语义路线缺失，召回可能下降</td></tr><tr><td>返回证据时原图丢失</td><td>503，而非静默返回坏图片</td><td>相同 Add 重试可补图</td></tr><tr><td>数据库写事务失败</td><td>消息、向量、缓存、请求状态回滚</td><td>可能留下已保存但未引用的原图文件</td></tr></tbody></table></div>
+<h2>幂等和缓存解决的是两个问题</h2>
+<p><strong>幂等</strong>回答“同一次请求重试会不会多写一条？”键是 user_id + request_id，并核对 payload_hash。<strong>缓存</strong>回答“这张图片在同版本模型下是不是已经分析过？”键是 user_id + media_key + analysis version。</p>
+<p>同一用户换一个请求 ID 上传相同图：会新增一条消息，但可以复用分析缓存。原请求原样重试：不会新增消息。另一用户上传相同图：不复用前一用户的分析缓存；每个用户也有自己的媒体 key 范围。</p>
+<h2>并发并不等于“所有计算只发生一次”</h2>
+<p>两个请求可能同时发现没有缓存，然后各自调用模型。数据库在提交时防止重复记录，但当前没有跨进程 single-flight，因此无法保证只产生一次远程调用费用。不要把“数据库不重复写”理解成“模型一定不重复算”。</p>
+<h2>用户隔离做到哪一层？</h2>
+<p>Units、向量查找、幂等记录、缓存均包含用户范围；图片路径也以用户哈希分目录。但 API Key 是整个服务级的，不会证明调用者真的拥有传入的 user_id。当前假设调用服务的一方可信，适合本地 demo，不是多租户生产鉴权系统。</p>
+<h2>容量与隐私边界</h2>
+<p>单图最多 10 MiB，Add 图片合计最多 30 MiB，Search 返回图片累计预算 30 MiB。媒体恢复超预算时跳过候选，可能少于 top_k。还没有整体 HTTP 请求体上限、速率限制、自动删除或 TTL。默认只监听本机；不要直接开放成公网服务。</p>
+<p>视觉开关开启会上传图片到配置的服务。分析报告虽然不包含 Base64，也可能包含图片中的个人信息。提示词要求忽略图中指令不等于完全防御提示注入；派生文字必须继续当作不可信数据。</p>
+<p class="source">源码：memory/errors.py · memory/service.py · memory/add.py · memory/search.py · storage/sqlite.py · media/local.py</p>
+</article>
+
+<article class="chapter" id="configuration" data-title="配置、启动与旧图补处理">
+<div class="eyebrow">12 / Run and maintain</div><h1>先确定开关，<br>再启动服务。</h1>
+<p class="lead">“有这段代码”和“当前启动时已启用这项能力”不一样。图片分析默认关闭；旧图也不会只因升级版本而自动补分析。</p>
+<h2>最简单：先运行不调用模型的模式</h2>
+<pre><code># 在项目根目录的 PowerShell 中执行
+$env:MEMORY_EMBEDDINGS = 'none'
+$env:MEMORY_VISION = 'none'
+$env:MEMORY_OCR = 'none'
+.\.conda\python.exe -m uvicorn memory_app.main:create_app --factory --host 127.0.0.1 --port 8000</code></pre>
+<p>此时纯文字可走 BM25，原图仍能保存与哈希匹配。打开 localhost:8000/docs 可查看接口；health 的 image_analysis 只是分析器是否装配，不保证远程服务此刻可用、也不保证识图正确。</p>
+<h2>常用配置在哪里？</h2>
+<div class="scroll"><table><thead><tr><th>变量</th><th>默认值／示意</th><th>作用</th></tr></thead><tbody><tr><td>MEMORY_DATA_DIR</td><td>data</td><td>数据库和媒体目录根位置</td></tr><tr><td>MEMORY_EMBEDDINGS</td><td>ollama / none</td><td>是否使用文本向量</td></tr><tr><td>OLLAMA_BASE_URL / OLLAMA_EMBED_MODEL</td><td>localhost:11434 / nomic-embed-text:latest</td><td>本地向量模型配置</td></tr><tr><td>MEMORY_VISION</td><td>none / compatible</td><td>是否启用远程视觉分析</td></tr><tr><td>VISION_BASE_URL / VISION_MODEL / VISION_API_KEY</td><td>默认空，需准确填写</td><td>真实服务地址、模型和密钥</td></tr><tr><td>VISION_REVISION</td><td>1</td><td>模型同名更新时手动区分版本</td></tr><tr><td>MEMORY_OCR</td><td>none / tesseract</td><td>独立 OCR 开关</td></tr><tr><td>TESSERACT_EXECUTABLE / OCR_LANGUAGES</td><td>tesseract / eng</td><td>引擎命令和已安装的语言包</td></tr><tr><td>OCR_REVISION</td><td>1</td><td>语言包等变化后刷新分析版本</td></tr><tr><td>MEMORY_API_KEY</td><td>空</td><td>可选服务级请求鉴权</td></tr></tbody></table></div>
+<div class="callout warn">.env.example 是配置清单，不会自动加载。PowerShell 的 $env 设置通常只影响当前进程和它启动的子进程。修改配置后需要重启对应服务；现有对象不会自动换模型。密钥不要发到聊天、写进笔记或提交 Git。</div>
+<h2>怎么检查一张真实图片？</h2>
+<p>先配置好至少一种分析器。独立 OCR 需另行安装 Tesseract 与语言包；远程服务需确认图片输入支持。再运行：</p>
+<pre><code>.\.conda\python.exe scripts\inspect_image.py --image .\你的图片.png --query '型号 M42'
+# 已开启远程视觉时，额外添加 --allow-remote，明确允许上传与可能的费用</code></pre>
+<p>脚本建立临时数据库，只上传原图，不把你的查询提前写进消息。报告保存在 data/evaluations/images。先读 image_artifacts 看描述与 OCR 是否真实，再看检索。只有一张候选时，向量也可能把无关问题返回为第一名，所以这不是准确率评测。</p>
+<h2>旧图怎样补分析？</h2>
+<pre><code># 只读预览：不迁移数据库，不调用模型
+.\.conda\python.exe scripts\backfill_images.py --user-id alice
+
+# 停止 API 写入，备份数据库和媒体，并配置分析器后再应用
+.\.conda\python.exe scripts\backfill_images.py --user-id alice --apply
+# 远程视觉同样需要额外 --allow-remote</code></pre>
+<p>工具按消息提交，重建派生记录和派生向量，保留原文与原文向量。中途失败，前面完成的消息仍保留，可重试。它不是更换 embedding 后的全量原文索引重建工具。旧数据库启动时的 source 迁移，也只是改变结构，不会替旧图片调用模型。</p>
+<h2>升级前为什么建议备份？</h2>
+<p>V0.1 的向量主键没有 source，V0.2 迁移后旧向量作为 text 保留。虽然有兼容测试，但旧版写入代码未必兼容新结构，所以“把代码退回去”不等于完整回滚数据。正式数据升级前，应停止写入并保留数据库与媒体副本。</p>
+<p class="source">源码：config.py · vision/factory.py · scripts/inspect_image.py · scripts/backfill_images.py · memory/backfill.py</p>
+</article>
+
+<article class="chapter" id="evaluation" data-title="测试工具与报告怎么读">
+<div class="eyebrow">13 / Tests and evaluation</div><h1>测试“程序没坏”，<br>和测试“真的搜得好”，是两件事。</h1>
+<p class="lead">前者需要可控输入与明确断言；后者需要真实模型、代表性资料和人工判断。不要把自动测试通过率当成记忆召回率。</p>
+<div class="callout"><strong>2026-10-14 图文诊断更新：</strong>Mem-Gallery 评测现在可选 <code>--with-images</code>，读取真实原图、运行本地 OCR，把图片和文字一起入库，再显示参考图片与各路实际召回图片。工作台勾选“真实图片 + 本地 OCR”，题数设 0 测完整场景；需要先补下载对应原图。图片 Hit/Recall 单独计分，不能用“命中同轮文字”代替“实际返回原图”。下文有关默认不处理原图的说明只适用于原来的文字模式，真实模式不使用数据集已有 caption。</div>
+<div class="scroll"><table><thead><tr><th>入口</th><th>能回答的问题</th><th>不能证明什么</th></tr></thead><tbody><tr><td>python -m pytest -q</td><td>幂等、隔离、持久化、异常、来源关联等行为是否符合预期</td><td>真实视觉或 embedding 的总体效果</td></tr><tr><td>scripts/smoke.py</td><td>运行中的 HTTP 是否能写入、重试、查找并恢复图文</td><td>不是比赛官方 Smoke，也不是规模评测</td></tr><tr><td>scripts/demo.py</td><td>三条故事与查询的演示</td><td>不是严格评测，向服务数据库写入数据</td></tr><tr><td>scripts/evaluate.py</td><td>极小自建集合上 BM25 / Dense / RRF 的对照</td><td>不代表复杂公开数据效果</td></tr><tr><td>scripts/evaluate_mem_gallery.py</td><td>公开对话数据的标注轮次召回诊断</td><td>默认不处理原图，不是官方得分</td></tr><tr><td>scripts/lab.py</td><td>查看历史报告、逐题原文、启动固定公开数据评测</td><td>没有集成真实图片效果报告</td></tr><tr><td>scripts/inspect_image.py</td><td>一张图提取了什么、能否走通检索</td><td>不评估多候选误检与总体准确率</td></tr></tbody></table></div>
+<h2>当前自动测试覆盖哪些方面？</h2>
+<p>V0.2 上一轮记录共 61 项检查通过，包括旧库迁移、旧图补处理、多图来源、缓存版本与用户范围、非法输出、事务回滚、查询临时分析和 Windows 同图并发写入。此前真实 HTTP smoke 使用临时库和受控分析器通过；这不代表真实视觉模型已经接通。</p>
+<h2>网页三列应该怎样看？</h2>
+<p>同一个问题，左列 BM25、中列 Dense、右列 RRF，分别展示找到的历史消息，不是三份新生成的答案。卡片 <code>#1 · D1:5 · assistant</code> 表示：本路线第 1 名，来自第 1 次会话的第 5 轮，是当时助手的消息。user 与 assistant 是两条不同消息，可以同时占据两个结果位置。</p>
+<p>绿色“命中标注轮次”表示消息所在 round 出现在该问题的 clue 参考名单里。另一条同轮消息也可能算命中，因为目前计分是轮次级，而不是逐条内容是否足够回答。灰色“非标注轮次”只表示不在名单中，不能直接断定无关。</p>
+<h2>用一个例子读懂四个数字</h2>
+<p>假设某题有三处参考轮次 A、B、C，前五条消息返回顺序是 X、A、A、B、Y。A 的两条消息按召回证据只算一个轮次。</p>
+<div class="scroll"><table><thead><tr><th>指标</th><th>这道题的值</th><th>解释</th></tr></thead><tbody><tr><td>Hit@5</td><td>1</td><td>至少找回一处参考轮次</td></tr><tr><td>Recall@5</td><td>2/3</td><td>三处中找到 A、B；不因重复 A 多算</td></tr><tr><td>MRR@5</td><td>1/2</td><td>第一处参考证据排第 2</td></tr><tr><td>全部找回</td><td>0</td><td>C 没找回，不能算全部找到</td></tr></tbody></table></div>
+<p><strong>上面的指标表，是用四个角度检查同一份结果：</strong>Hit 问“有没有找到一处”，Recall 问“应该找到的找齐了多少”，MRR 问“第一处找到得够不够靠前”，全部找回问“是不是一处都没漏”。它们不是四个不同的搜索算法。</p>
+<p>总体表对有标注题求平均；无 clue 题只展示、不计分。Recall 100% 不代表五条消息都相关，只意味着参考轮次已经找齐。MRR 是小数评分，不是答案正确率或模型置信度。</p>
+<h2>公开数据诊断的限制</h2>
+<p>当前把场景全部历史入库，再测试选择的问题，不模拟提问时的历史截止。limit 是按原始顺序取前 N 题，不是随机代表样本。问题、答案与 clue 不写入记忆。--include-captions 只是把数据集已有描述加入文字，不调用我们的视觉模型，也不能当作视觉能力的实测。</p>
+<div class="check"><h3>查看一个失败问题的推荐顺序</h3><p>读问题 → 读标注原文 → 读三路实际返回文本 → 看首次命中与召回率 → 再判断漏在提取、检索还是融合。没有读原文之前，不急着只根据红绿标签改算法。</p></div>
+<p class="source">源码：tests/ · scripts/evaluate_mem_gallery.py · lab/app.py · lab/index.html</p>
+</article>
+
+<article class="chapter" id="change" data-title="想改功能，该改哪里">
+<div class="eyebrow">14 / Change map</div><h1>把“我想改进它”，<br>变成一个明确的修改范围。</h1>
+<p class="lead">模块拆分的价值，最终要体现在改动时：不是所有东西都“完全不用改”，而是变动有相对清楚的边界。</p>
+<div class="scroll"><table><thead><tr><th>想做的事</th><th>主要修改位置</th><th>还需要检查</th></tr></thead><tbody><tr><td>换视觉模型，协议仍兼容</td><td>环境变量、VISION_REVISION</td><td>真实输出校验、旧图补分析、费用与服务约束</td></tr><tr><td>服务协议不同</td><td>llms 新适配器、vision/factory.py</td><td>超时、非法响应、凭据、敏感日志</td></tr><tr><td>让描述关注铭牌或颜色</td><td>vision/caption.py 提示词</td><td>版本哈希、幻觉、对照样例、旧图补处理</td></tr><tr><td>换独立 OCR 引擎</td><td>vision 下新分析器、factory 与 config</td><td>统一 ImageAnalysis 输出、引擎依赖、语言与版本</td></tr><tr><td>调整分片大小或重叠</td><td>memory/units.py、embedding 版本</td><td>重建对应向量，不能只改常量就期待旧索引变化</td></tr><tr><td>换文本 embedding 服务</td><td>embeddings 新适配器、main/config</td><td>前缀、归一化、版本、维数、全量重建方案</td></tr><tr><td>换向量库／加 HNSW</td><td>vector_stores 适配器、装配</td><td>用户过滤、版本隔离、事务能力和性能</td></tr><tr><td>改融合权重或重排</td><td>retrieval/fusion.py、search.py</td><td>单路对照、召回损失、延迟、未知问题</td></tr><tr><td>返回可解释的命中片段</td><td>Candidate、vectors、fusion、evidence、API schema</td><td>来源链与外部格式变化；不是只改前端标签</td></tr><tr><td>改 HTTP 字段名</td><td>api/schemas.py、routes.py 的边界映射</td><td>客户端、兼容与请求幂等哈希行为</td></tr></tbody></table></div>
+<h2>为什么不保证“换什么都只改一个文件”？</h2>
+<p>合理架构减少无关耦合，但新能力仍会跨越几个模块。比如新增图片分析，需要任务模块、来源存储、Add 流程和装配一起配合。重点是各自只承担自己的部分，不是为了追求一个文件修改而把所有工作堆进同一个地方。</p>
+<h2>一个容易上手的小迭代</h2>
+<p>先拿几张铭牌图，用 inspect_image 看 visible_text 是否准确。如果目标型号没有提取出来，先调整 OCR / 视觉任务，而不是立刻修改 RRF。如果目标文字已经准确提取，却 BM25 没命中，再检查分词、用户范围和旧图是否完成补处理。</p>
+<h2>每次修改建议留下什么？</h2>
+<ol><li>具体失败样例和原始结果。</li><li>一个明确假设，例如“型号中的连字符被分词拆开影响匹配”。</li><li>一次只改变少量因素的修复。</li><li>自动回归、真实样例对照和仍未解决的问题。</li></ol>
+<div class="callout">“我现在找不到可改进的地方”很正常。先有能观察问题的样例，再形成改动，不必为了迭代而更换看起来高级的算法。</div>
+</article>
+
+<article class="chapter" id="limits" data-title="已实现、待验证与未实现">
+<div class="eyebrow">15 / Capability boundaries</div><h1>把三种状态分开，<br>设计才不会变成误解。</h1>
+<p class="lead">有接口、有受控测试、真实模型效果达标，是不同层级。这里明确写下当前版本能做什么，以及不能据此推出什么。</p>
+<h2><span class="pill">已实现</span> 当前代码链路</h2>
+<ul><li>HTTP Add/Search、原始消息持久化、有序图文恢复与用户范围检索。</li><li>文本分片 embedding、BM25、向量线性扫描与 RRF，图片字节哈希匹配。</li><li>可配置远程视觉、可选独立 Tesseract、派生来源、按版本缓存。</li><li>查询图片临时分析、Add 失败不提交、Search 模型失败降级。</li><li>旧库 source 迁移、指定用户旧图补处理、单图检查报告。</li><li>独立本地实验台与 Mem-Gallery 文字／已有描述诊断。</li></ul>
+<h2><span class="pill wait">待真实验证</span> 不能先宣称完成</h2>
+<ul><li>实际视觉服务账号、准确模型名、输出协议和图片输入是否可用。</li><li>真实图像描述、小字 OCR、模糊图、多语言和复杂版面的准确性。</li><li>真实图片集合中的召回、误检、模型幻觉、延迟和费用。</li><li>竞赛最新模型限制、资格、正式接口与官方 Smoke/Full。</li><li>在更大数据量、长历史、多用户情境中的容量与性能。</li></ul>
+<h2>未实现的东西</h2>
+<p>直接图片向量、真正的视觉相似图片查找、HNSW 等近似索引、LLM 最终回答、reranker、知识图谱、时间截止检索、自动拒答、完整原文 embedding 重建工具、按用户删除与 TTL、生产级多租户授权、Docker 与公网部署。</p>
+<h2>当前实现中值得记住的局限</h2>
+<p>向量按消息取最大片段相似度；API 不返回命中片段出处。BM25 对整条扩展文本打分。组合视觉和 OCR 不做结果冲突校验。缓存不保证并发模型调用只发生一次。文件和数据库之间没有原子跨系统提交。相关性阈值尚未建立，单候选返回不能证明有证据。</p>
+<h2>怎样理解“下一版本完成了”？</h2>
+<p>当前 V0.2 完成的是一条可配置、可追溯、经过行为测试的图片检索工程链路。下一步仍需真实样例与模型接通，才能判断这条方案是否解决了我们的图片问题。文档不会把计划中的模块写成已经具备的效果。</p>
+<div class="callout warn">本文是 2026-10-11 的源码快照说明。以后修改了模型协议、数据结构或检索方式，应同步更新对应章节；版本号相同也不代表文档永远自动正确。</div>
+</article>
+
+<article class="chapter" id="glossary" data-title="术语表：把名字翻译成人话">
+<div class="eyebrow">16 / Glossary</div><h1>遇到一个名字，<br>先问它在这里指什么。</h1>
+<dl class="glossary">
+<dt>payload · 请求携带的数据</dt><dd>不是一种神秘格式。Add 中通常是包含 user_id、messages 等字段的字典；另一个函数里同名变量也可能指数据库里的一段 JSON，含义取决于上下文。</dd>
+<dt>raw / bytes / Base64</dt><dd>raw 是原始图片字节。Base64 把二进制转成方便放进 JSON 的字符串，不是图片压缩或加密。parser 解码后才把 bytes 交给媒体保存与分析。</dd>
+<dt>MIME</dt><dd>例如 image/png，说明媒体格式。不能只相信请求自报格式；我们会用实际字节核对。</dd>
+<dt>key / media_key</dt><dd>图片在媒体目录里的相对标识。当前由用户哈希和图片字节哈希组成，不是密钥，也不是 embedding。</dd>
+<dt>root / Path</dt><dd>root 是存储根目录。Python Path 的斜杠运算可拼路径：root / key 得到完整文件位置，不是在做数学除法。</dd>
+<dt>Unit</dt><dd>记忆基本单元，当前是一条消息。它与“对话轮次”“图片”“向量片段”不是一回事。</dd>
+<dt>artifact · 派生记录</dt><dd>图片分析产生的附加资料，包含描述、可见文字和来源版本。它不是用户原话，不能替代原始证据。</dd>
+<dt>source / chunk_order</dt><dd>source 说明向量来自原文还是某张图的哪类派生文字；chunk_order 是这个来源内部的分片序号。</dd>
+<dt>embedding / vector / index</dt><dd>embedding 是生成数值表示的过程或模型；vector 是结果；index 是帮助查找的组织结构。当前向量存 SQLite 并线性比较，没有复杂向量索引。</dd>
+<dt>adapter · 适配器</dt><dd>把某个外部工具的具体调用方式，包装成项目需要的能力。比如 OllamaEmbedder 把 Ollama HTTP 接口包装成 embed()。</dd>
+<dt>dependency injection · 依赖注入</dt><dd>需要工具的对象不在内部写死工具，而由外部通过参数传入。这与 SQL 注入或提示词注入不是同一种“注入”。</dd>
+<dt>Protocol</dt><dd>描述对象要有哪些方法和属性的能力约定。它不等于必须继承的基类，也不自动验证网络响应。</dd>
+<dt>pass / ...</dt><dd>pass 是 Python 的空操作占位，执行时什么都不做。三个点 ... 是 Ellipsis，也常用作接口方法体占位。看到它们不能推断功能已实现；要看这是接口声明、空壳，还是别处提供了真实对象。</dd>
+<dt>transaction · 事务</dt><dd>把多次数据库修改作为一组提交或回滚。这里原始消息、向量、缓存和幂等记录同事务；磁盘图片不属于这一个 SQLite 事务。</dd>
+<dt>idempotency · 幂等</dt><dd>同一个成功请求原样重试，不多写一份逻辑记忆。不是保证所有模型调用只执行一次。</dd>
+<dt>cache / revision / provenance</dt><dd>cache 复用已有计算；revision 人工区分可变模型或语言包版本；provenance 记录“结果由谁、按什么配置生成”。</dd>
+<dt>recall / retrieval / reranking</dt><dd>retrieval 是找回候选的过程；recall 是参考证据找回比例；reranking 是对候选再次精排。RRF 是排名融合，当前没有专门的重排模型。</dd>
+<dt>local HTTP / 127.0.0.1</dt><dd>本机服务地址，其他电脑不能通过自己的 127.0.0.1 访问你的电脑。它不等于公网 IP；读离线文档不需要云服务器。</dd>
+</dl>
+</article>
+
+<article class="chapter" id="learning" data-title="学习路线与自查练习">
+<div class="eyebrow">17 / Read the code yourself</div><h1>不必一次全懂，<br>先亲手追完一条路径。</h1>
+<p class="lead">理解项目不是背下每个文件。能解释一份输入怎样变成结果，知道出现问题时先看哪里，就已经是在建立工程能力。</p>
+<h2>第一轮：只追踪文字 Add</h2>
+<ol><li>读 routes.py 的 add：body 怎样变成字典？</li><li>读 service.py 的 add：工具怎样传给 add_memory？</li><li>读 add.py：纯文字情况下哪些步骤会跳过？</li><li>读 parser.py：纯字符串返回哪四个值？</li><li>读 indexing.py：一条消息如何变成一组向量记录？</li><li>读 commit_add：数据库在哪里开始真正写入？</li></ol>
+<h2>第二轮：在同一条消息里放一张图</h2>
+<p>先保持图片分析关闭，观察 media_key 与原图文件；再配置分析器，观察 image_artifacts。不要同时改分片、模型与排序。你要能解释：新增描述为什么没有出现在返回的用户原话里，却能参与搜索。</p>
+<h2>第三轮：追踪 Search</h2>
+<p>先看 query 的文字在哪里形成，再看三路候选的条件，然后看 RRF 与 compose。尝试解释“top_k=5，却返回少于 5 条”可能有哪些原因：候选本来少、去重、没有匹配，或者图片预算。</p>
+<h2>五个自查问题</h2>
+<details><summary>1 · 为什么换 embedding 不应该重写 HTTP 路由？</summary><p>路由只负责请求格式和调用 service。模型调用被适配器封装，具体对象在启动时装配。更换模型主要影响适配器、配置、版本和索引重建，而不是请求处理逻辑。</p></details>
+<details><summary>2 · 同一张图上传两次，为什么既可能新增消息，又可能不新增？</summary><p>同一个成功 request_id 原样重试不新增；换 request_id 是新的 Add，可新增消息。图片文件与分析结果可能复用，这和消息是否新增是两个层级。</p></details>
+<details><summary>3 · OCR 已经写出了 M42，但查询仍然失败，先看什么？</summary><p>先确认 OCR 派生记录真的提交到目标用户、目标数据库，旧图片是否补处理；再看查询词法和向量单路结果，最后看融合与输出预算。不要只凭模型日志“识别过”就认定可查询数据已经存在。</p></details>
+<details><summary>4 · 为什么一张图的检查成功，不能说明图片检索做好了？</summary><p>没有干扰候选，也没有足够的无证据问题；向量即使对无关问题也可能返回唯一候选。需要多图集合、明确参考与人工核对提取内容。</p></details>
+<details><summary>5 · 关闭图片分析以后，已有描述就消失了吗？</summary><p>不会。开关主要决定新 Add 和图片 query 是否调用分析器；已保存的 artifacts 仍参与 BM25，已有匹配版本向量仍可被查找。关闭调用不是删除已生成数据。</p></details>
+<h2>下一步建议做什么？</h2>
+<p>先确定一个真实视觉服务或本地 OCR 路径，拿几张有权使用的图片做提取检查。记录描述遗漏、型号误读、相似图片干扰，再决定要调整哪个模块。比赛规则和真实模型效果尚未验证的部分，继续作为独立任务推进。</p>
+<h2>文档与参考的边界</h2>
+<p>本文主要依据当前仓库文件，而不是照搬通用 RAG 架构。功能目录组织参考过 Mem0；这里只解释我们已经写出的代码。远程模型名称和竞赛规则可能变化，因此文档不把某个服务型号写成永久默认，也不承诺官方评分。</p>
+<div class="callout"><strong>你可以用自己的话收尾：</strong>“入口准备工具，API 接请求，Service 提供方法，Add/Search 安排流程，工具完成具体任务，ID 把检索线索和原始证据连起来。”能解释这句话，就已经抓住这个版本的主干。</div>
+<p class="source">维护入口：本 HTML 是当前版本导读；10 月 2 日合并笔记保留 V0 历史，10 月 10 日笔记保留 V0.2 决策与测试记录。修改代码后，更新相关章节与说明日期，不覆盖历史讨论。</p>
+</article>
+
+<nav class="pager" aria-label="章节翻页"><a id="prev" href="#start"><small>上一章</small><span></span></a><a id="next" href="#architecture"><small>下一章</small><span></span></a></nav>
+<p class="page-foot">Memory Wiki / V0.2 · 本文不调用模型、不读取你的数据库。图为离线 HTML 图解；Mermaid 源码可在相关章节展开。</p>
+</main></div>
+<script>
+'use strict';
+(()=>{
+ const articles=[...document.querySelectorAll('article.chapter')];
+ const links=[...document.querySelectorAll('.sidebar nav a')];
+ const search=document.getElementById('search');
+ const state=document.getElementById('search-state');
+ const menu=document.getElementById('menu');
+ const texts=articles.map(a=>(a.dataset.title+' '+a.textContent).toLowerCase());
+ function show(){
+   let hash;try{hash=decodeURIComponent(location.hash.slice(1));}catch{hash='start';}
+   let index=articles.findIndex(a=>a.id===hash);if(index<0)index=0;
+   articles.forEach((a,i)=>a.hidden=i!==index);
+   links.forEach((a,i)=>{a.classList.toggle('active',i===index);if(i===index)a.setAttribute('aria-current','page');else a.removeAttribute('aria-current');});
+   const chapter=articles[index];document.title=chapter.dataset.title+' · Memory Wiki V0.2';
+   document.getElementById('breadcrumb').textContent=`MEMORY WIKI / ${String(index+1).padStart(2,'0')} · ${chapter.dataset.title}`;
+   for(const [name,offset] of [['prev',-1],['next',1]]){
+     const link=document.getElementById(name),target=articles[index+offset];
+     link.hidden=!target;if(target){link.href='#'+target.id;link.querySelector('span').textContent=target.dataset.title;}
+   }
+   document.body.classList.remove('menu-open');menu.setAttribute('aria-expanded','false');
+ }
+ window.addEventListener('hashchange',()=>{show();window.scrollTo({top:0,behavior:'instant'});});
+ search.addEventListener('input',()=>{
+   const terms=search.value.trim().toLowerCase().split(/\s+/).filter(Boolean);let found=0;
+   links.forEach((link,i)=>{const match=terms.every(term=>texts[i].includes(term));link.hidden=!match;if(match)found++;});
+   document.querySelectorAll('.nav-group').forEach(g=>g.hidden=terms.length>0);
+   state.textContent=terms.length?`正文匹配 ${found} 章；点击章节阅读，Ctrl+F 查找具体文字。`:'17 章 · 建议从第 01 章开始';
+ });
+ menu.addEventListener('click',()=>{const open=document.body.classList.toggle('menu-open');menu.setAttribute('aria-expanded',String(open));});
+ show();
+})();
+</script>
+</body>
+</html>

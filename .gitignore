@@ -1,7 +1,12 @@
 .conda/
 data/
 .env
+.env.*
+!.env.example
+!.env.competition.example
 __pycache__/
 *.egg-info/
+build/
+dist/
 .pytest_cache/
 *.log

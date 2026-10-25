@@ -23,9 +23,24 @@ class SQLiteStore:
                 CREATE TABLE IF NOT EXISTS vectors (
                     unit_id TEXT NOT NULL REFERENCES units(id), user_id TEXT NOT NULL,
                     version TEXT NOT NULL, chunk_order INTEGER NOT NULL, value TEXT NOT NULL,
-                    PRIMARY KEY(unit_id, version, chunk_order));
+                    source TEXT NOT NULL DEFAULT 'text',
+                    PRIMARY KEY(unit_id, version, source, chunk_order));
                 CREATE INDEX IF NOT EXISTS vectors_user ON vectors(user_id, version);
+                CREATE TABLE IF NOT EXISTS image_analyses (
+                    user_id TEXT NOT NULL, media_key TEXT NOT NULL, version TEXT NOT NULL,
+                    payload TEXT NOT NULL, PRIMARY KEY(user_id, media_key, version));
             """)
+            # Additive, transactional V0.1 -> V0.2 migration; old vectors remain valid.
+            conn.execute("BEGIN IMMEDIATE")
+            if "source" not in {row[1] for row in conn.execute("PRAGMA table_info(vectors)")}:
+                conn.execute("""CREATE TABLE vectors_v2 (
+                    unit_id TEXT NOT NULL REFERENCES units(id), user_id TEXT NOT NULL,
+                    version TEXT NOT NULL, chunk_order INTEGER NOT NULL, value TEXT NOT NULL,
+                    source TEXT NOT NULL, PRIMARY KEY(unit_id,version,source,chunk_order))""")
+                conn.execute("INSERT INTO vectors_v2 SELECT *, 'text' FROM vectors")
+                conn.execute("DROP TABLE vectors")
+                conn.execute("ALTER TABLE vectors_v2 RENAME TO vectors")
+                conn.execute("CREATE INDEX vectors_user ON vectors(user_id, version)")
 
     @contextmanager
     def connect(self):
@@ -59,8 +74,34 @@ class SQLiteStore:
             for unit in units:
                 conn.execute("INSERT INTO units VALUES (?,?,?)",
                              (unit.id, unit.user_id, json.dumps(asdict(unit), ensure_ascii=False)))
+                self.cache_analyses(conn, unit)
             vector_store.insert(conn, user_id, vectors)
             conn.execute("INSERT INTO requests VALUES (?,?,?)", (user_id, request_id, payload_hash))
+
+    def get_image_analysis(self, user_id, key, version):
+        with self.connect() as conn:
+            row = conn.execute("SELECT payload FROM image_analyses WHERE user_id=? AND media_key=? AND version=?",
+                               (user_id, key, version)).fetchone()
+        return json.loads(row[0]) if row else None
+
+    @staticmethod
+    def cache_analyses(conn, unit):
+        for artifact in unit.image_artifacts:
+            value = {kind: artifact.get(kind, "") for kind in ("description", "visible_text", "contextual_description")}
+            conn.execute("INSERT OR IGNORE INTO image_analyses VALUES (?,?,?,?)",
+                         (unit.user_id, artifact["media_key"], artifact["version"],
+                          json.dumps(value, ensure_ascii=False)))
+
+    def replace_image_index(self, unit, records, vector_store):
+        """Backfill one unit atomically; preserve its original text vectors."""
+        with self.connect() as conn:
+            conn.execute("BEGIN IMMEDIATE")
+            conn.execute("UPDATE units SET payload=? WHERE id=? AND user_id=?",
+                         (json.dumps(asdict(unit), ensure_ascii=False), unit.id, unit.user_id))
+            conn.execute("DELETE FROM vectors WHERE unit_id=? AND user_id=? AND source<>'text'",
+                         (unit.id, unit.user_id))
+            self.cache_analyses(conn, unit)
+            vector_store.insert(conn, unit.user_id, records)
 
     def list_units(self, user_id):
         with self.connect() as conn:

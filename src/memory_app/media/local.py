@@ -25,7 +25,15 @@ class LocalMediaStore:
                 stream.write(raw)
                 stream.flush()
                 os.fsync(stream.fileno())
-            os.replace(temp, target)
+            try:
+                os.replace(temp, target)
+            except PermissionError:
+                # Windows can deny replacement when another writer has just
+                # published/opened the same immutable content-addressed file.
+                # Its presence already satisfies put; never suppress failure
+                # when no target was successfully published.
+                if not target.exists():
+                    raise
         finally:
             if os.path.exists(temp):
                 os.unlink(temp)

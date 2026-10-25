@@ -1,0 +1,26 @@
+[
+  {
+    "path": "tests/test_competition_models.py",
+    "code": "embedded_url_credentials",
+    "sha256": "d2b7ba6f0174a1d12c2386eb7951719b17e077c2610048ec65d54823e3e49dba",
+    "reason": "Reviewed 2026-10-25: synthetic invalid endpoint fixture; verifies URL credentials are rejected."
+  },
+  {
+    "path": "tests/test_diagnostics.py",
+    "code": "embedded_url_credentials",
+    "sha256": "a64ef375564d3987e1b4cc566721ed32c2498ecf46cd855697a07fb5bd5ee2c1",
+    "reason": "Reviewed 2026-10-25: synthetic invalid probe URL under reserved test domain, no real credentials."
+  },
+  {
+    "path": "tests/test_service_limits.py",
+    "code": "api_key_like",
+    "sha256": "1003a789c9ec3c78b204eeedcda606416a1b5bbc86848849fc82802b2e55fc4b",
+    "reason": "Reviewed 2026-10-25: deliberately fake private-input discriminator fixture; checks that validation never reflects input."
+  },
+  {
+    "path": "笔记/mamoryX架构.png",
+    "code": "binary_needs_manual_review",
+    "sha256": "7b447f1d2888a23b336ef0a7e123f83aaeeb1b2fc4cbca34d9f4e5676c0cad54",
+    "reason": "Visually reviewed 2026-10-25: existing public reference architecture diagram, no private evaluation data or credentials; provenance caveat in METHOD.md."
+  }
+]

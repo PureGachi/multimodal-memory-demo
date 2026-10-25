@@ -7,9 +7,9 @@ class SQLiteVectorStore:
         self.store = store
 
     def insert(self, conn, user_id, vectors):
-        conn.executemany("INSERT INTO vectors VALUES (?,?,?,?,?)", [
-            (unit_id, user_id, version, order, json.dumps(vector))
-            for unit_id, version, order, vector in vectors
+        conn.executemany("INSERT INTO vectors (unit_id,user_id,version,chunk_order,value,source) VALUES (?,?,?,?,?,?)", [
+            (record[0], user_id, record[1], record[2], json.dumps(record[3]),
+             record[4] if len(record) == 5 else "text") for record in vectors
         ])
 
     def search(self, user_id, version, queries, limit):

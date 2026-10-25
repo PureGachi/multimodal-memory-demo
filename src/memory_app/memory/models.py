@@ -12,6 +12,7 @@ class Unit:
     text: str
     created_at: str
     media_keys: list[str] = field(default_factory=list)
+    image_artifacts: list[dict] = field(default_factory=list)
 
 
 @dataclass(frozen=True)

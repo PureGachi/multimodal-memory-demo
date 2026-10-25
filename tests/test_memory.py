@@ -27,7 +27,9 @@ def search(client, query="红色告警灯", user="alice", top_k=3):
 
 @pytest.fixture
 def client(tmp_path):
-    with TestClient(create_app(Settings(data_dir=tmp_path, embeddings="none"))) as value:
+    # Storage concurrency tests need four admitted requests; admission limits are
+    # exercised independently in test_service_limits.py.
+    with TestClient(create_app(Settings(data_dir=tmp_path, embeddings="none", max_inflight=8))) as value:
         yield value
 
 

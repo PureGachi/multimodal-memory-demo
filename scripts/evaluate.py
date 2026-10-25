@@ -6,7 +6,7 @@ import tempfile
 from pathlib import Path
 from PIL import Image
 from memory_app.config import Settings
-from memory_app.embeddings.ollama import OllamaEmbedder
+from memory_app.embeddings.factory import build_embedder
 from memory_app.media.local import LocalMediaStore
 from memory_app.storage.sqlite import SQLiteStore
 from memory_app.vector_stores.sqlite import SQLiteVectorStore
@@ -17,7 +17,9 @@ from memory_app.retrieval.fusion import rrf
 
 def run():
     settings = Settings.from_env()
-    embedder = OllamaEmbedder(settings.ollama_url, settings.embed_model)
+    embedder = build_embedder(settings)
+    if embedder is None:
+        raise ValueError("This diagnostic compares dense retrieval; enable embeddings first")
     texts = ["我最喜欢蓝色机械键盘。", "3号机床出现红色告警灯，需要停机检查。",
              "周末计划去杭州西湖旅行。", "联系我时优先发邮件，不要打电话。",
              "去年我住在上海。", "这个月我搬到了苏州。"]

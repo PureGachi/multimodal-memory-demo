@@ -1,0 +1,142 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Memory · 检索实验台</title>
+<style>
+:root{color-scheme:light;--ink:#20322f;--muted:#61706b;--line:#dce4df;--green:#186854}*{box-sizing:border-box}body{margin:0;background:#f4f6f3;color:var(--ink);font:15px/1.6 system-ui,"Microsoft YaHei",sans-serif}main{max-width:1500px;margin:auto;padding:30px}h1,h2,h3{line-height:1.3}h1{margin:0;font-size:30px}h2{font-size:20px;margin-top:0}h3{font-size:16px}p{margin:8px 0}.muted{color:var(--muted)}.panel{background:white;border:1px solid var(--line);border-radius:14px;padding:22px;margin:20px 0}.controls{display:flex;flex-wrap:wrap;gap:14px;align-items:end}label{display:flex;flex-direction:column;gap:5px;font-size:13px}.check{flex-direction:row;align-items:center;align-self:center}select,input,button{font:inherit;padding:9px;border:1px solid #becdc4;border-radius:7px;background:white;color:var(--ink)}select{max-width:100%}input[type=number]{width:100px}button{cursor:pointer;background:var(--green);color:white;border:0;padding:11px 18px}button:disabled{opacity:.45;cursor:default}button.secondary{background:#e6eee9;color:var(--ink)}#scenario{max-width:390px}#reports{width:100%}#message{color:#a02d26;white-space:pre-wrap}pre{white-space:pre-wrap;overflow-wrap:anywhere;margin:0;font:14px/1.7 system-ui,sans-serif}#logs{max-height:180px;overflow:auto;background:#172a25;color:#d3e8dc;padding:14px;border-radius:8px;font:12px/1.5 monospace}table{border-collapse:collapse;width:100%;margin:14px 0}td,th{text-align:left;border-bottom:1px solid var(--line);padding:10px}th{font-weight:600;color:var(--muted)}.scroll{overflow-x:auto}.explain{background:#edf4ef;padding:13px;border-radius:9px;font-size:13px}.columns{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px}.column{min-width:0;background:#f8faf7;border-radius:10px;padding:13px}.evidence{padding:14px;background:white;border:1px solid var(--line);border-radius:9px;margin:12px 0}.evidence.hit{border-left:4px solid #26936e}.tag{font-size:12px;color:var(--muted);margin-bottom:8px}.hit .tag{color:var(--green)}.gold{background:#eef5ed;border-radius:9px;padding:16px;margin:12px 0}details{margin:10px 0}summary{cursor:pointer;font-weight:600}#questions{flex:1;min-width:200px}#report-meta{overflow-wrap:anywhere;font-size:13px}#viewer[hidden]{display:none}a{color:var(--green)}@media(max-width:900px){main{padding:16px}.columns{grid-template-columns:1fr}.panel{padding:16px}}
+label{min-width:0;max-width:100%}#questions{width:100%;min-width:0}.controls>label{max-width:100%}h3{overflow-wrap:anywhere}
+.report-image{display:block;max-width:100%;max-height:420px;width:auto;height:auto;object-fit:contain;border:1px solid var(--line);border-radius:8px;background:#fff;margin:10px 0}.image-columns{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:20px}.image-columns>div{min-width:0}.derived{background:#edf4ef;border-radius:8px;padding:12px;margin:10px 0}.derived summary{font-size:13px}.image-warning{font-size:13px;color:#94652c}.reference-gallery{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:15px}.reference-gallery>div{min-width:0}.columns:has(> :only-child){grid-template-columns:1fr}[hidden]{display:none!important}@media(max-width:900px){.image-columns,.reference-gallery{grid-template-columns:1fr}}
+</style>
+</head>
+<body><main>
+<header><p class="muted">MEMORY / LOCAL LAB · 图文报告版</p><h1>检索实验台</h1><p class="muted">先看见证据，再决定怎样改进。仅本机使用，不是竞赛成绩。</p></header>
+<section class="panel"><h2>开始一次实验</h2>
+<div class="controls">
+<label>数据场景<select id="scenario"></select></label>
+<label>模型路线<select id="mode"><option value="none">仅 BM25 · 快速检查</option><option value="ollama">BM25 + 本地 Ollama + RRF</option><option value="compatible">BM25 + 远程 text-embedding-v4 + RRF（可能付费）</option></select></label>
+<label class="check"><input id="allow-remote-embeddings" type="checkbox">确认远程向量调用可能付费（每次索引全部历史）</label>
+<label>前几题（0=全部）<input id="limit" type="number" min="0" max="10000" value="10"></label>
+<label>返回消息数 K<input id="topk" type="number" min="1" max="100" value="5"></label>
+<label class="check"><input id="captions" type="checkbox">加入数据集已有图片描述</label>
+<label class="check"><input id="raw-images" type="checkbox">真实图片 + 本地 OCR（不使用已有描述）</label>
+<label>OCR 语言<select id="ocr-language"><option value="eng">英文 · Mem-Gallery 默认</option><option value="chi_sim">简体中文</option><option value="chi_sim+eng">中文 + 英文</option></select></label>
+<button id="run">开始评测</button>
+</div>
+<p class="muted">始终索引该场景全部历史；不会写入问题和答案。勾选真实图片会读取已下载原图、运行本地 OCR，并保存报告图片副本；缺图会明确失败。不会调用付费视觉 API；选择远程 embedding 则会发送历史文字/OCR 文字和问题到 EMBEDDING_BASE_URL，可能产生费用，先配置 .env 并运行 embedding_smoke.py 小测试。减少题数不会减少历史索引费用。默认不读取原图；题数设 0 可测试完整场景。</p>
+<p id="job-status" role="status">尚无正在运行的实验。</p><details id="progress"><summary>查看运行日志</summary><pre id="logs"></pre></details>
+<p id="message" role="alert"></p>
+</section>
+<section class="panel"><h2>进度、错误与断点</h2><button class="secondary" id="refresh-checkpoints">刷新断点状态</button><p class="muted">失败不等于零分。这里展示已完成历史／问题及安全错误说明；不自动重试、不调用模型。续跑请使用相同命令参数，并追加 --resume 和对应目录；不要点击“开始评测”来代替续跑，那会新建实验。状态是最后一次记录，强制关闭进程后可能仍显示 running，请先确认旧进程已停止。</p><pre id="checkpoints">尚未读取断点。</pre></section>
+<section class="panel"><h2>查看已有报告</h2><div class="controls"><label style="flex:1">选择报告<select id="reports"></select></label><button class="secondary" id="refresh">刷新列表</button></div><p class="muted">查看报告不调用模型。每次实验保留独立结果，旧报告不会被覆盖。</p></section>
+<section id="viewer" class="panel" hidden><h2>总体结果</h2><p id="report-meta" class="muted"></p><div id="summary" class="scroll"></div>
+<div class="explain"><strong>这些数字不等于回答正确率。</strong><br>Hit@K：有标注的题中，前 K 条至少命中一处标注轮次的题目比例。<br>Recall@K：每题找回标注轮次的比例，再取平均；需要 A/B/C、找到 A/B，该题就是 2/3。<br>MRR@K：第一处证据排第 r，记 1/r；没找到记 0，再取平均。此处显示小数，不是百分比。<br>全部找回率：所有标注轮次都找齐的题目比例。K 按消息计，同轮两种角色可能占两条；无 clue 题不计分。<br>“非标注轮次”不一定无用，“命中轮次”也不保证这条消息能回答。请结合原文判断。</div>
+<details><summary>查看分题型指标（沿用数据 point 标签）</summary><div id="groups" class="scroll"></div></details>
+<h2 style="margin-top:28px">逐题对照</h2><div class="controls"><label>筛选<select id="filter"><option value="all">所有问题</option><option value="miss">至少一路没有命中</option><option value="dense-only">向量命中、融合未命中</option><option value="no-clue">没有 clue · 不计分</option></select></label><label style="flex:1">选择问题<select id="questions"></select></label></div>
+<div id="question"></div><div id="expected-images"></div><div id="gold"></div><div id="channels" class="columns"></div>
+</section>
+<section id="image-viewer" class="panel" hidden><h2>图文召回报告</h2><p id="image-meta" class="muted"></p><div class="explain">先看原图，再核对 OCR，最后看实际召回。OCR 是机器提取的派生信息，不是用户原话。清晰示例上的成功不等于复杂照片准确率；查看报告不会调用模型。</div><div id="image-results"></div></section>
+</main>
+<script>
+'use strict';
+const $=id=>document.getElementById(id);
+const names={lexical:'BM25 · 关键词',dense:'向量 · 语义',fusion:'RRF · 混合'};
+let report=null,shownJob=null,pollBusy=false,starting=false;
+function el(tag,text,cls){const n=document.createElement(tag);if(text!==undefined)n.textContent=text;if(cls)n.className=cls;return n;}
+async function api(path,options){const r=await fetch(path,{cache:'no-store',...options});if(!r.ok){const body=await r.json().catch(()=>({detail:r.statusText}));throw Error(typeof body.detail==='string'?body.detail:JSON.stringify(body.detail));}return r.json();}
+function error(e){$('message').textContent=e.message;}
+function option(value,text){const o=el('option',text);o.value=value;return o;}
+function pct(v){return v==null?'—':(v*100).toFixed(1)+'%';}
+function metricTable(summary){const table=el('table'),head=el('tr');['路线','计分题数','Hit@K','Recall@K','MRR@K','全部找回率'].forEach(t=>head.append(el('th',t)));table.append(head);for(const [name,s] of Object.entries(summary)){const row=el('tr');[names[name]||name,s.scored_questions,pct(s.hit_at_k),pct(s.recall_at_k),s.mrr_at_k==null?'—':s.mrr_at_k.toFixed(3),pct(s.all_evidence_found)].forEach(t=>row.append(el('td',t)));table.append(row);}return table;}
+async function refreshReports(selectId){const entries=await api('/api/reports');const old=selectId||$('reports').value;$('reports').replaceChildren(option('','请选择报告'));for(const r of entries){const when=r.created_at?new Date(r.created_at).toLocaleString():'旧报告 · 时间未记录';$('reports').append(option(r.id,`${when} · ${r.scenario} · ${r.questions}题 · K=${r.top_k} · ${r.channels.join('/')} · ${r.kind?'图文报告':r.raw_images?'真实图文':r.captions?'含已有图片描述':'纯对话'}`));}if(entries.some(r=>r.id===old))$('reports').value=old;else if(entries.length)$('reports').value=entries[0].id;}
+async function loadReport(){
+ if(!$('reports').value)return;
+ const id=$('reports').value,data=await api('/api/report?id='+encodeURIComponent(id));
+ if($('reports').value!==id)return;
+ // Older image reports predate the explicit report_type field.
+ const kind=Array.isArray(data.samples)?'ocr':Array.isArray(data.image_artifacts)&&'query' in data?'image-inspection':data.report_type;
+ const isImage=['ocr','image-inspection'].includes(kind);
+ $('viewer').hidden=true;$('image-viewer').hidden=true;$('message').textContent='';
+ if(isImage){report={...data,report_type:kind};showImageReport(report);$('image-viewer').hidden=false;return;}
+ if(!data.metadata||typeof data.metadata.scenario!=='string'||!data.summary||!Array.isArray(data.details)){
+  throw Error('报告格式不受支持，或页面版本与服务不一致。请按 Ctrl+Shift+R 刷新整个页面后重试；“刷新列表”不会更新页面代码。');
+ }
+ report=data;const m=report.metadata;
+ const analysisLabel=m.image_analysis_mode==='configured'?'配置的图片理解工具':m.image_analysis_mode==='ocr'?'本地 OCR':'图片理解工具（旧报告未标注类型）';
+ const imageLabel=(m.transformed_history_images||m.transformed_query_images)?'数据集图片（含压缩副本）':'真实原图';
+ $('report-meta').textContent=`${m.scenario} · 测试 ${m.tested_questions}/${m.total_questions} 题 · ${report.indexed_messages} 条消息 · 索引 ${Number(report.index_seconds||0).toFixed(1)} 秒 · 无 clue ${report.no_clue_questions} 题 · K=${report.top_k} · ${m.raw_images_used?imageLabel+' + '+analysisLabel+'（历史 '+report.indexed_images+' 张；处理提问附图 '+(m.query_images_analyzed??'未记录')+' 题）':m.include_dataset_captions?'使用数据集已有图片描述':'纯对话，未读取原图'}。全历史静态检索，不模拟提问时间截止。`;
+ $('summary').replaceChildren(metricTable(report.summary));$('groups').replaceChildren();
+ if(m.transformed_history_images||m.transformed_query_images)$('summary').append(el('p',`注意：本地评测使用了压缩副本（历史 ${m.transformed_history_images||0} 张、提问 ${m.transformed_query_images||0} 张）。原始文件未覆盖；这不是官方图片适配器的处理结果，压缩可能影响小字与细节。`,'explain'));
+ if(m.experiment==='offline-rrf-weights-v1'){
+  $('summary').append(el('p','离线权重实验：只读复用原候选与模型缓存，没有重新索引或调用模型。0 秒/0 ms 是未测量的占位值。关键词权重变化，向量权重固定 1；图片身份通道固定 1（纯向量基线不使用它）。同场景探索结果还需要另一个场景验证，尚未改变正式 Search 权重。','explain'));
+  for(const [name,changes]of Object.entries(report.weight_changes||{}))$('summary').append(el('p',`${name} 相对等权 RRF：${changes.length} 题指标发生变化；题号 ${changes.map(c=>'Q'+c.question).join('、')||'无'}。可在下方选题对照排名。`,'muted'));
+ }
+ if(m.raw_images_used&&report.image_summary){const t=el('table'),head=el('tr');['路线','有参考图片的题数','图片 Hit@K','图片 Recall@K','参考图片全部找回率'].forEach(s=>head.append(el('th',s)));t.append(head);for(const [name,v]of Object.entries(report.image_summary)){const row=el('tr');[names[name]||name,v.scored_questions,pct(v.hit_at_k),pct(v.recall_at_k),pct(v.all_evidence_found)].forEach(s=>row.append(el('td',s)));t.append(row);}$('summary').append(el('h3','图片单独计分（不以轮次命中代替图片命中）'),t);}
+ for(const [point,s]of Object.entries(report.by_point||{}))$('groups').append(el('h3',point),metricTable(s));
+ fillQuestions();$('viewer').hidden=false;
+}
+function reportImage(container,path,inline=false){
+ if(typeof path!=='string')return;
+ let src;
+ if(inline){if(path.length>14*1024*1024||!/^data:image\/(png|jpeg|webp);base64,[A-Za-z0-9+/=\r\n]+$/.test(path)){container.append(el('p','图片引用不受支持；不加载外部网址。','image-warning'));return;}src=path;}
+ else{if(!path||/[:\\]/.test(path)||path.startsWith('/')){container.append(el('p','旧报告未保存可读取的本地图片，请重新生成报告。','image-warning'));return;}src='/api/report-image?id='+encodeURIComponent($('reports').value)+'&image='+encodeURIComponent(path);}
+ const img=el('img',undefined,'report-image');img.alt='报告中的图片（预处理情况见旁边说明）';img.loading='lazy';img.referrerPolicy='no-referrer';img.src=src;img.onerror=()=>{img.hidden=true;container.append(el('p','图片缺失、格式非法或引用超出报告目录，无法展示。','image-warning'));};container.append(img);
+}
+function preprocessingNotice(container,items){for(const image of items||[]){const p=image.preprocessing||image;if(p.transformed)container.append(el('p',`压缩副本：${(p.source_bytes/1048576).toFixed(2)} MiB → ${(p.output_bytes/1048576).toFixed(2)} MiB；JPEG 质量 ${p.jpeg_quality}，可能影响文字与细节。原图保留。`,'image-warning'));}}
+function renderContent(container,item){
+ const content=item.content;
+ if(typeof content==='string'&&content)container.append(el('pre',content));
+ else if(Array.isArray(content)){for(const part of content){if(part.type==='text')container.append(el('pre',part.text||''));else if(part.type==='image_url')reportImage(container,part.image_url?.url,true);}}
+ for(const path of item.images||[])reportImage(container,path);
+ if(item.image_ids?.length)container.append(el('p','图片 ID：'+item.image_ids.join('、'),'tag'));
+ if(item.image)reportImage(container,item.image);
+ preprocessingNotice(container,item.image_preprocessing);
+ if(item.image_artifacts?.length){const derived=el('details',undefined,'derived');derived.append(el('summary','机器提取的描述 / OCR / 对话背景（不是原始消息）'));for(const a of item.image_artifacts){if(a.description)derived.append(el('p','图片描述（仅图片可见内容）','tag'),el('pre',a.description));derived.append(el('p','OCR / 可见文字','tag'),el('pre',a.visible_text||'（未提取到文字）'));if(a.contextual_description)derived.append(el('p','对话背景（来自说话者的陈述，不是视觉事实）','tag'),el('pre',a.contextual_description));if(a.context_messages?.length){const sources=el('details');sources.append(el('summary','实际提供给模型的背景来源'));for(const m of a.context_messages)sources.append(el('p',m.role+' · '+m.message_id,'tag'),el('pre',m.text+(m.truncated?'\n（已截取前 4000 字符）':'')));derived.append(sources);}}container.append(derived);}
+}
+function showImageReport(data){
+ const root=$('image-results');root.replaceChildren();$('image-meta').textContent=data.report_type==='ocr'?`真实本地 OCR · ${data.samples.length} 张测试图 · OCR + BM25 · 无 embedding 或付费 API。`:'单张图片链路检查：只有一个候选，不代表召回准确率。';
+ const samples=data.report_type==='ocr'?data.samples:[{name:'单张图片',query:data.query,image:data.image,visible_text:(data.image_artifacts||[]).map(a=>a.visible_text).join('\n'),returned:data.retrieved}];
+ for(const sample of samples){const section=el('article',undefined,'evidence');section.append(el('h3',sample.name+' · 查询：'+sample.query));const columns=el('div',undefined,'image-columns'),original=el('div'),returned=el('div');original.append(el('h3','参考原图'),el('p','这是应找回的资料，不是额外的图片查询。','tag'));reportImage(original,sample.image);original.append(el('h3','实际 OCR'),el('pre',sample.visible_text||'（未提取到文字）'));if(sample.printed_text){const expected=el('details');expected.append(el('summary','测试图的印刷文字模板（未作为文字入库）'),el('pre',sample.printed_text));original.append(expected);}returned.append(el('h3','实际召回结果'));
+ let items=sample.returned;
+ if(!Array.isArray(items)){items=(sample.returned_ids||[]).map((id,index)=>{const source=samples.find(s=>s.unit_id===id);return {rank:index+1,memory_id:id,images:source?[source.image]:[],image_artifacts:source?[{visible_text:source.visible_text}]:[]};});returned.append(el('p','旧报告仅保存排名 ID；图片按同份报告的来源映射展示，分数未记录。','tag'));}
+ if(!items.length)returned.append(el('p','未返回候选。'));
+ for(const [index,item] of items.entries()){const card=el('div',undefined,'evidence');const id=item.memory_id||item.id;card.append(el('p',`#${item.rank||index+1} · ${id||'ID 未记录'}`,'tag'));renderContent(card,item);if(item.score!==undefined)card.append(el('p','排序分数：'+item.score,'tag'));returned.append(card);}
+ if(sample.top1_correct!==undefined)section.append(el('p',`首条找对：${sample.top1_correct?'是':'否'} · 目标文字识别：${sample.query_present_ignoring_whitespace===undefined?'旧报告未记录':sample.query_present_ignoring_whitespace?'是':'否'} · 原图还原：${sample.original_image_restored?'一致':'失败'}`,'tag'));
+ columns.append(original,returned);section.append(columns);root.append(section);}
+ if(data.negative_query)root.append(el('p',`无证据查询：${data.negative_query} · 返回 ${data.negative_returned_ids?.length||0} 条。只代表这个例子，不是通用拒答能力。`));
+}
+function fillQuestions(){if(!report)return;const old=$('questions').value;const filtered=report.details.filter(q=>{const channels=Object.values(q.channels),f=$('filter').value;if(f==='no-clue')return !q.clues.length;if(f==='miss')return channels.some(c=>c.metrics&&c.metrics.hit_at_k===0);if(f==='dense-only')return q.channels.dense?.metrics?.hit_at_k===1&&q.channels.fusion?.metrics?.hit_at_k===0;return true;});$('questions').replaceChildren();for(const q of filtered)$('questions').append(option(String(q.number),`Q${q.number} [${q.point}] ${q.question}`));if(filtered.some(q=>String(q.number)===old))$('questions').value=old;showQuestion();}
+function showQuestion(){
+ for(const id of ['question','expected-images','gold','channels'])$(id).replaceChildren();
+ const q=report?.details.find(q=>String(q.number)===$('questions').value);
+ if(!q){$('question').append(el('p','没有符合筛选条件的问题。','muted'));return;}
+ $('question').append(el('h3',q.question),el('p',q.clues.length?'标注轮次：'+q.clues.join('、'):'没有 clue：只展示候选，不计分。','muted'));
+ const queryBox=el('div');
+ if(q.query_images?.length){queryBox.append(el('h3','提问附带的图片（搜索输入，不是历史记忆）'));for(const image of q.query_images)reportImage(queryBox,image.image);queryBox.append(el('p',(report.metadata?.experiment==='offline-rrf-weights-v1'?'原实验图片理解耗时（本次复用）：':'本次图片理解耗时：')+Number(q.query_analysis_ms||0).toFixed(1)+' ms；此耗时不含在下方各检索通道时间内。','muted'));}
+ if(q.query_image_status==='omitted_text_only')queryBox.append(el('p','注意：此题附带图片，但本次为纯文本模式，没有读取提问图片。','image-warning'));
+ if(!report.metadata?.query_protocol)queryBox.append(el('p','旧版报告未处理提问附图，不能据此判断完整图文查询能力；历史图片仍可能已被处理。','image-warning'));
+ if(q.retrieval_query!==undefined){const actual=el('details');actual.append(el('summary','查看实际检索文字（原问题 + 临时图片线索）'),el('pre',q.retrieval_query));queryBox.append(actual);}
+ $('question').append(queryBox);
+ preprocessingNotice(queryBox,q.query_images);
+ if(q.expected_images?.length){const reference=$('expected-images');reference.append(el('h3','应该召回的参考图片'),el('p',q.expected_image_basis==='answer_mentions'?'依据：参考答案明确提到的图片 ID。答案仅用于评测，未写入记忆。':'依据：标注 clue 轮次中的图片；这些是参考证据，不保证每张都是唯一正确答案。','muted'));const gallery=el('div',undefined,'reference-gallery');for(const image of q.expected_images){const box=el('div',undefined,'gold');box.append(el('p',image.image_id,'tag'));reportImage(box,image.image);gallery.append(box);}reference.append(gallery);}else if(report.metadata?.raw_images_used)$('expected-images').append(el('p','此题没有可定位的参考图片，只评价标注轮次。','muted'));
+ const answer=el('details');answer.append(el('summary','参考答案（只供检查，未写入记忆）'),el('pre',typeof q.answer==='string'?q.answer:JSON.stringify(q.answer)));$('question').append(answer);
+ const gold=el('details');gold.open=!q.expected_images?.length;gold.append(el('summary','标注证据原文与附图'));
+ for(const g of q.gold_evidence){const box=el('div',undefined,'gold');box.append(el('h3',`${g.round} · ${g.date||''}${g.has_image?' · 此轮附有图片':''}`));for(const m of g.messages){box.append(el('p',m.role,'tag'));renderContent(box,m);}for(const image of g.images||[])reportImage(box,image);gold.append(box);}
+ $('gold').append(gold);
+ for(const [name,c]of Object.entries(q.channels)){
+  const col=el('section',undefined,'column');col.append(el('h3',names[name]||name));const m=c.metrics;
+  col.append(el('p',m?`Hit ${m.hit_at_k?'✓':'✗'} · Recall ${pct(m.recall_at_k)} · 首次命中 ${m.first_evidence_rank||'无'}`:'无 clue，不计分','muted'),el('p',report.metadata?.experiment==='offline-rrf-weights-v1'?'离线排名对照 · 耗时未测量':`本次耗时 ${c.latency_ms.toFixed(1)} ms`,'tag'));
+  if(c.image_metrics)col.append(el('p',`图片 Hit ${c.image_metrics.hit_at_k?'✓':'✗'} · 图片 Recall ${pct(c.image_metrics.recall_at_k)}（必须实际返回图片）`,'muted'));
+  if(!c.returned.length)col.append(el('p','未返回候选。'));
+  for(const item of c.returned){const hit=q.clues.includes(item.round),box=el('article',undefined,'evidence'+(hit?' hit':''));box.append(el('div',`#${item.rank} · ${item.round} · ${item.role} · ${hit?'命中标注轮次':'非标注轮次'}`,'tag'));renderContent(box,item);if(q.expected_images?.length){const matched=(item.image_ids||[]).filter(id=>q.expected_images.some(image=>image.image_id===id));box.append(el('p',matched.length?'✓ 返回参考图片：'+matched.join('、'):item.images?.length?'返回了其他图片，未命中参考图片':'本消息没有返回图片；轮次命中也不算图片命中',matched.length?'tag':'image-warning'));}const extra=el('details');extra.append(el('summary','分数 / ID'),el('pre',`分数：${item.score}\nID：${item.memory_id}\n不同路线的分数不能直接比较。`));box.append(extra);col.append(box);}
+  $('channels').append(col);
+ }
+}
+async function poll(){if(pollBusy)return;pollBusy=true;try{const j=await api('/api/job');$('run').disabled=starting||j?.status==='running'||!$('scenario').value;if(!j){$('job-status').textContent='尚无正在运行的实验。';return;}const label={running:'运行中',completed:'已完成',failed:'失败'}[j.status]||j.status;const route={none:'仅 BM25',ollama:'本地 Ollama + 混合检索',compatible:'远程 text-embedding-v4 + 混合检索'}[j.options.embeddings]||j.options.embeddings;$('job-status').textContent=`${label} · ${j.options.scenario} · ${route}`;const logs=$('logs');const nearBottom=logs.scrollHeight-logs.scrollTop-logs.clientHeight<50;logs.textContent=j.logs.join('\n');if(nearBottom)logs.scrollTop=logs.scrollHeight;if(j.status==='completed'&&j.report_id&&shownJob!==j.id){shownJob=j.id;await refreshReports(j.report_id);await loadReport();}if(j.status==='failed')$('progress').open=true;}catch(e){$('job-status').textContent='无法连接实验台，请确认启动终端仍在运行。';}finally{pollBusy=false;}}
+$('raw-images').onchange=()=>{if($('raw-images').checked)$('captions').checked=false;$('captions').disabled=$('raw-images').checked;};
+$('run').onclick=async()=>{starting=true;$('run').disabled=true;$('message').textContent='';try{const limit=Number($('limit').value),top_k=Number($('topk').value);if(!Number.isInteger(limit)||limit<0||limit>10000||!Number.isInteger(top_k)||top_k<1||top_k>100)throw Error('题数需为 0–10000 的整数，K 需为 1–100 的整数。');if($('mode').value==='compatible'&&!$('allow-remote-embeddings').checked)throw Error('请先确认远程 embedding 费用；它会索引全部历史，建议先做小测试。');const j=await api('/api/run',{method:'POST',headers:{'Content-Type':'application/json','X-Memory-Lab':'1'},body:JSON.stringify({scenario:$('scenario').value,embeddings:$('mode').value,allow_remote_embeddings:$('allow-remote-embeddings').checked,limit,top_k,include_captions:$('captions').checked,with_images:$('raw-images').checked,ocr_languages:$('ocr-language').value})});$('logs').textContent='正在启动…';$('progress').open=true;$('job-status').textContent='运行中 · '+j.options.scenario;}catch(e){error(e);}finally{starting=false;await poll();}};
+$('reports').onchange=()=>loadReport().catch(error);$('refresh').onclick=async()=>{try{await refreshReports();await loadReport();}catch(e){error(e);}};$('filter').onchange=fillQuestions;$('questions').onchange=showQuestion;
+async function refreshCheckpoints(){try{const rows=await api('/api/checkpoints');$('checkpoints').textContent=Array.isArray(rows)&&rows.length?rows.map(r=>`${r.scenario||'场景'} · ${r.status} · ${r.stage}\n已写入 ${r.indexed_rounds}/${r.total_rounds??'?'} 轮；已完成 ${r.completed_questions}/${r.total_questions??'?'} 题${r.round_id?'；当前轮次 '+r.round_id:''}${r.question_number?'；当前问题 '+r.question_number:''}\n${r.error?r.error.component+' / '+r.error.code+'：'+r.error.message+(r.error.http_status?' · HTTP '+r.error.http_status:'')+(r.error.provider_code?' · '+r.error.provider_code:'')+'\n'+r.error.hint+'\n':''}续跑目录：${r.resume_path}`).join('\n\n'):'暂无检查点。旧版失败任务没有保存进度，无法恢复。';}catch(e){$('checkpoints').textContent='无法读取检查点，请确认工作台已重启到新版。';}}
+$('refresh-checkpoints').onclick=refreshCheckpoints;refreshCheckpoints();
+(async()=>{try{const scenarios=await api('/api/scenarios');for(const s of scenarios)$('scenario').append(option(s,s.replace(/\.json$/,'')));const preferred='AI_Robotics_Automation_Future_Tech.json';if(scenarios.includes(preferred))$('scenario').value=preferred;if(!scenarios.length)$('message').textContent='没有找到场景 JSON，请先下载到 data/benchmarks/mem-gallery/data/dialog/。';await refreshReports();await loadReport();await poll();}catch(e){error(e);}setInterval(poll,1500);})();
+</script></body></html>

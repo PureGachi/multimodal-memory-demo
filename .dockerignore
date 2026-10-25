@@ -1,0 +1,15 @@
+# Allowlist: never send secrets, benchmark media, reports, notebooks or Conda to Docker.
+*
+!Dockerfile
+!.dockerignore
+!pyproject.toml
+!requirements-lock.txt
+!src/
+!src/**
+src/**/__pycache__/
+src/**/*.pyc
+src/*.egg-info/
+**/.env
+**/.env.*
+**/*.sqlite3
+**/*.log

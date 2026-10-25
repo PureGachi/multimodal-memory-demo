@@ -1,6 +1,7 @@
-import secrets
 from fastapi import APIRouter, Depends, HTTPException, Request
+from memory_app import __version__
 from memory_app.api.schemas import AddRequest, SearchRequest
+from memory_app.api.limits import valid_credentials
 
 
 def build_router(service, api_key, mode):
@@ -11,14 +12,13 @@ def build_router(service, api_key, mode):
             return
         provided = request.headers.get("x-api-key", "")
         auth = request.headers.get("authorization", "")
-        if auth.startswith("Bearer ") or auth.startswith("Token "):
-            provided = auth.split(" ", 1)[1]
-        if not secrets.compare_digest(provided.encode(), api_key.encode()):
+        if not valid_credentials(api_key, provided, auth):
             raise HTTPException(401, "Invalid API key")
 
     @router.get("/health")
     def health():
-        return {"status": "ok", "version": "0.1.0", "embeddings": mode}
+        return {"status": "ok", "version": __version__, "embeddings": mode,
+                "image_analysis": service.vision is not None}
 
     @router.post("/add", dependencies=[Depends(authorize)])
     def add(body: AddRequest):
