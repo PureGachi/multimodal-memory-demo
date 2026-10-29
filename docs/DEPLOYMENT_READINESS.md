@@ -36,7 +36,7 @@ Linux 测试使用单独的开发镜像，才安装 Git、Node、Tesseract；生
 - 导出文件：`data/evaluations/deployment/artifacts/20261026-docker-local-6883f9c4/memory-demo-linux-amd64.tar`，70,607,360 字节。
 - 归档 SHA-256：`44cc831d5069c0ece76e6074f63989e76f8822589a372d5d34aea584a2eeeb68`。
 
-镜像不包含模型密钥或用户数据，只是运行程序。不要把开发测试镜像 `memory-demo:linux-tests-...` 用作参赛部署。本地候选源代码 Commit 为 `ffe3b7da278126b7eb364fbaef10eab209af35c2`；写入本轮部署文档后的最终 Git Commit 还须再次核对公开远端与服务器镜像来源，不能仅凭镜像标签认定完全一致。
+镜像不包含模型密钥或用户数据，只是运行程序。不要把开发测试镜像 `memory-demo:linux-tests-...` 用作参赛部署。候选源代码 Commit 为 `ffe3b7da278126b7eb364fbaef10eab209af35c2`，已推送到公开仓库；交接文档也已发布。提交时仍须核对最新公开完整 Commit 与服务器镜像来源，不能仅凭镜像标签认定完全一致。
 
 ## 如何重复本地检查
 
